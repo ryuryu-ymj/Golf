@@ -1,6 +1,7 @@
 package io.github.ryuryu_ymj.golf.edit
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -18,7 +19,12 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         camera.viewportHeight, camera
     )
     private val stage = Stage(viewport, batch)
-    private val input = MyInputProcessor(viewport, this)
+    private val uiViewport = FitViewport(1600f, 900f)
+    private val uiStage = Stage(uiViewport, batch)
+    private val input = InputMultiplexer().also {
+        it.addProcessor(stage)
+        it.addProcessor(MyInputProcessor(viewport, this))
+    }
 
     private val cellList = GdxArray2d(-3..3, -3..3) { x, y ->
         Cell(asset, x, y).also {
@@ -28,6 +34,7 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
 
     init {
         camera.position.setZero()
+        uiStage.addActor(Cursor(asset))
     }
 
     override fun show() {
@@ -40,12 +47,15 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
 
     override fun resize(width: Int, height: Int) {
         viewport.update(width, height)
+        uiViewport.update(width, height)
     }
 
     override fun render(delta: Float) {
         stage.draw()
+        uiStage.draw()
 
         stage.act()
+        uiStage.act()
     }
 
     override fun touchDown(x: Float, y: Float): Boolean {
