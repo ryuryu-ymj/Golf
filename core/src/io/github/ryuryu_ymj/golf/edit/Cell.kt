@@ -17,7 +17,7 @@ class Cell(private val asset: AssetManager, ix: Int, iy: Int) : Actor() {
         setSize(CELL_SIZE, CELL_SIZE)
         addListener(object : KtxInputListener() {
             override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
-                cursorType?.let {
+                brushType?.let {
                     type = it
                     return true
                 }

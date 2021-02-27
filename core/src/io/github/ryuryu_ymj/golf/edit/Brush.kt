@@ -7,9 +7,9 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
 
-internal var cursorType: CellType? = null; private set
+internal var brushType: CellType? = null; private set
 
-class Cursor(private val asset: AssetManager) : Actor() {
+class Brush(private val asset: AssetManager) : Actor() {
     init {
         setPosition(0f, 0f)
         setSize(50f, 50f)
@@ -19,16 +19,16 @@ class Cursor(private val asset: AssetManager) : Actor() {
         super.act(delta)
         when {
             Gdx.input.isKeyPressed(Input.Keys.F) ->
-                cursorType = CellType.FAIRWAY
+                brushType = CellType.FAIRWAY
             Gdx.input.isKeyPressed(Input.Keys.N) ->
-                cursorType = CellType.NULL
+                brushType = CellType.NULL
             Gdx.input.isKeyPressed(Input.Keys.M) ->
-                cursorType = null
+                brushType = null
         }
     }
 
     override fun draw(batch: Batch, parentAlpha: Float) {
-        cursorType?.let {
+        brushType?.let {
             val texture = asset.get<Texture>(it.path)
             batch.draw(texture, x, y, width, height)
         }

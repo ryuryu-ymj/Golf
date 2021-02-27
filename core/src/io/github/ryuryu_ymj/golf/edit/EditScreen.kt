@@ -34,7 +34,7 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
 
     init {
         camera.position.setZero()
-        uiStage.addActor(Cursor(asset))
+        uiStage.addActor(Brush(asset))
     }
 
     override fun show() {
