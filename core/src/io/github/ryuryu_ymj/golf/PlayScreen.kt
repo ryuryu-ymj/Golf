@@ -38,7 +38,7 @@ class PlayScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         camera.position.x = 0f
 
         stage += bg
-        course.readCourse(1)
+        //course.readCourse(1)
         stage += ball
         stage += arrow
     }

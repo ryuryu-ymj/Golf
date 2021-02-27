@@ -14,6 +14,8 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ktx.app.KtxScreen
+import java.io.PrintWriter
+import java.lang.Exception
 
 class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
     private val batch = SpriteBatch()
@@ -36,22 +38,28 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         camera.position.setZero()
         uiStage.addActor(Brush(asset))
 
+        fun defaultCellList() = GdxArray2d(-10..10, -10..10) { x, y ->
+            Cell(asset, x, y).also {
+                stage.addActor(it)
+            }
+        }
+
         val file = Gdx.files.internal("course/01raw")
         cellList =
             if (file.exists()) {
-                val read = Json.decodeFromString<GdxArray2d<CellType>>(file.readString())
-                GdxArray2d(read.rangeX(), read.rangeY()) { x, y ->
-                    Cell(asset, x, y).also {
-                        stage.addActor(it)
-                        it.type = read[x, y]
+                try {
+                    val read = Json.decodeFromString<GdxArray2d<CellType>>(file.readString())
+                    GdxArray2d(read.rangeX(), read.rangeY()) { x, y ->
+                        Cell(asset, x, y).also {
+                            stage.addActor(it)
+                            it.type = read[x, y]
+                        }
                     }
+                } catch (e: Exception) {
+                    defaultCellList()
                 }
             } else {
-                GdxArray2d(-3..3, -3..3) { x, y ->
-                    Cell(asset, x, y).also {
-                        stage.addActor(it)
-                    }
-                }
+                defaultCellList()
             }
     }
 
@@ -79,6 +87,8 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
             val file = Gdx.files.local("course/01raw")
             file.writeString(Json.encodeToString(cellTypeList), false)
             println("save edit file to course/01raw")
+
+            saveBodyFile(cellTypeList.toArray2d())
         }
     }
 
@@ -97,5 +107,59 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
     override fun dispose() {
         stage.dispose()
         batch.dispose()
+    }
+
+    private fun saveBodyFile(cells: Array<Array<CellType>>) {
+        val file = Gdx.files.local("course/01body")
+        val writer = PrintWriter(file.writer(false))
+        val startX = 0
+        val startY = 0
+
+        while (true) {
+            var boxX = -1
+            var boxY = -1
+            var boxW = 0
+            var boxH = 0
+            xLoop@
+            for (x in cells.indices) {
+                for (y in cells[x].indices) {
+                    if (boxX == -1) {
+                        if (cells[x][y] == CellType.FAIRWAY) {
+                            boxX = x
+                            boxY = y
+                        }
+                    } else if (boxH == 0) {
+                        if (cells[x][y] != CellType.FAIRWAY) {
+                            boxH = y - boxY
+                        } else if (y == cells[x].lastIndex) {
+                            boxH = y + 1 - boxY
+                        }
+                    } else if (y < boxY) {
+                        continue
+                    } else if (y >= boxY + boxH) {
+                        break
+                    } else if (cells[x][y] != CellType.FAIRWAY) {
+                        boxW = x - boxX
+                        break@xLoop
+                    } else if (x == cells.lastIndex) {
+                        boxW = x + 1 - boxX
+                    }
+                }
+            }
+            if (boxX == -1) break
+            println("$boxX, $boxY, $boxW, $boxH")
+            for (x in boxX until boxX + boxW) {
+                for (y in boxY until boxY + boxH) {
+                    cells[x][y] = CellType.NULL
+                }
+            }
+            val x = (boxX - startX) * CELL_SIZE
+            val y = (boxY - startY) * CELL_SIZE
+            val width = boxW * CELL_SIZE
+            val height = boxH * CELL_SIZE
+            writer.println("fairway,box,${x}f,${y}f,${width}f,${height}f")
+        }
+        writer.close()
+        println("save body file to course/01body")
     }
 }

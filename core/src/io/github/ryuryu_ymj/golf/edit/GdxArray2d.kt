@@ -114,6 +114,7 @@ class GdxArray2d<T>() {
             }
             w2 += left
         }
+        bottomLeft.toTypedArray()
     }
 
     fun <R> map(transform: (T) -> R): GdxArray2d<R> {
@@ -122,3 +123,10 @@ class GdxArray2d<T>() {
         }
     }
 }
+
+inline fun <reified T> GdxArray2d<T>.toArray2d() =
+    Array(width()) { x ->
+        Array(height()) { y ->
+            get(startX() + x, startY() + y)
+        }
+    }
