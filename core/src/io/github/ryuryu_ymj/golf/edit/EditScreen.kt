@@ -1,6 +1,7 @@
 package io.github.ryuryu_ymj.golf.edit
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.OrthographicCamera
@@ -9,6 +10,9 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.viewport.FitViewport
 import io.github.ryuryu_ymj.golf.MyInputProcessor
 import io.github.ryuryu_ymj.golf.MyTouchable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import ktx.app.KtxScreen
 
 class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
@@ -26,15 +30,29 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         it.addProcessor(MyInputProcessor(viewport, this))
     }
 
-    private val cellList = GdxArray2d(-3..3, -3..3) { x, y ->
-        Cell(asset, x, y).also {
-            stage.addActor(it)
-        }
-    }
+    private val cellList: GdxArray2d<Cell>
 
     init {
         camera.position.setZero()
         uiStage.addActor(Brush(asset))
+
+        val file = Gdx.files.internal("course/01raw")
+        cellList =
+            if (file.exists()) {
+                val read = Json.decodeFromString<GdxArray2d<CellType>>(file.readString())
+                GdxArray2d(read.rangeX(), read.rangeY()) { x, y ->
+                    Cell(asset, x, y).also {
+                        stage.addActor(it)
+                        it.type = read[x, y]
+                    }
+                }
+            } else {
+                GdxArray2d(-3..3, -3..3) { x, y ->
+                    Cell(asset, x, y).also {
+                        stage.addActor(it)
+                    }
+                }
+            }
     }
 
     override fun show() {
@@ -56,6 +74,12 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
 
         stage.act()
         uiStage.act()
+        if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+            val cellTypeList = cellList.map { it.type }
+            val file = Gdx.files.local("course/01raw")
+            file.writeString(Json.encodeToString(cellTypeList), false)
+            println("save edit file to course/01raw")
+        }
     }
 
     override fun touchDown(x: Float, y: Float): Boolean {
