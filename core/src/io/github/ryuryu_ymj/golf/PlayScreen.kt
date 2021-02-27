@@ -35,13 +35,20 @@ class PlayScreen(asset: AssetManager) : KtxScreen, MyTouchable {
     private val course = CourseManager(stage, world)
 
     init {
-        Gdx.input.inputProcessor = input
         camera.position.x = 0f
 
         stage += bg
         course.readCourse(1)
         stage += ball
         stage += arrow
+    }
+
+    override fun show() {
+        Gdx.input.inputProcessor = input
+    }
+
+    override fun hide() {
+        Gdx.input.inputProcessor = null
     }
 
     override fun resize(width: Int, height: Int) {
