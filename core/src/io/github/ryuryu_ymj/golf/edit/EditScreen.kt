@@ -6,7 +6,6 @@ import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.viewport.FitViewport
 import io.github.ryuryu_ymj.golf.MyInputProcessor
@@ -14,10 +13,12 @@ import io.github.ryuryu_ymj.golf.MyTouchable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import ktx.actors.KtxInputListener
 import ktx.app.KtxScreen
 import java.io.PrintWriter
 import java.lang.Exception
+
+internal var startX = 0
+internal var startY = 0
 
 class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
     private val batch = SpriteBatch()
@@ -34,32 +35,23 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         it.addProcessor(MyInputProcessor(viewport, this))
     }
 
-    private val cellList: MutableArray2d<Cell>
-
-    private var startX = 0
-    private var startY = 0
+    private val cellList = MutableList2d<Cell>()
 
     init {
         camera.position.setZero()
         uiStage.addActor(Brush(asset))
 
-        fun defaultCellList() = MutableArray2d(-10..10, -10..10) { x, y ->
-            Cell(asset, x, y).also {
-                stage.addActor(it)
-                if (x == startX && y == startY) {
-                    it.type = CellType.START
-                }
-            }
-        }
-
         val file = Gdx.files.internal("course/01raw")
-        cellList = if (file.exists()) {
+        if (file.exists()) {
             try {
-                val read = Json.decodeFromString<MutableArray2d<CellType>>(file.readString())
-                MutableArray2d(read.rangeX(), read.rangeY()) { x, y ->
-                    Cell(asset, x, y).also {
+                val cellType = Json.decodeFromString<MutableList2d<CellType>>(file.readString())
+                cellList.add(
+                    cellType.rangeX.last + 1, -cellType.rangeX.first,
+                    cellType.rangeY.last + 1, -cellType.rangeY.first
+                ) { x, y ->
+                    Cell(asset, cellList, x, y).also {
                         stage.addActor(it)
-                        it.type = read[x, y]
+                        it.type = cellType[x, y]
                         if (it.type == CellType.START) {
                             startX = x
                             startY = y
@@ -67,34 +59,18 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
                     }
                 }
             } catch (e: Exception) {
-                defaultCellList()
             }
-        } else {
-            defaultCellList()
         }
 
-        cellList.forEach {
-            it.addListener(object : KtxInputListener() {
-                override fun touchDown(
-                    event: InputEvent,
-                    x: Float,
-                    y: Float,
-                    pointer: Int,
-                    button: Int
-                ): Boolean {
-                    val brushType = brushType ?: return false
-                    if (it.type != brushType && it.type != CellType.START) {
-                        it.type = brushType
-                        if (brushType == CellType.START) {
-                            cellList[startX, startY].type = CellType.NULL
-                            startX = it.ix
-                            startY = it.iy
-                        }
-                        return true
+        if (cellList.isEmpty) {
+            cellList.add(10, 10, 10, 10) { x, y ->
+                Cell(asset, cellList, x, y).also {
+                    stage.addActor(it)
+                    if (x == startX && y == startY) {
+                        it.type = CellType.START
                     }
-                    return false
                 }
-            })
+            }
         }
     }
 
@@ -120,12 +96,23 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
             Gdx.input.isKeyJustPressed(Input.Keys.S)
         ) {
+            // save
             val cellTypeList = cellList.map { it.type }
             val file = Gdx.files.local("course/01raw")
             file.writeString(Json.encodeToString(cellTypeList), false)
             println("save edit file to course/01raw")
 
             saveBody(cellTypeList)
+        } else if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
+            Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) &&
+            Gdx.input.isKeyJustPressed(Input.Keys.A)
+        ) {
+            // clear with CellType.NULL
+            cellList.forEach {
+                if (it.type != CellType.START) {
+                    it.type = CellType.NULL
+                }
+            }
         }
     }
 
@@ -146,7 +133,7 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         batch.dispose()
     }
 
-    private fun saveBody(cellTypeList: MutableArray2d<CellType>) {
+    private fun saveBody(cellTypeList: MutableList2d<CellType>) {
         val file = Gdx.files.local("course/01body")
         val writer = PrintWriter(file.writer(false))
 
@@ -156,8 +143,8 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
             var boxW = 0
             var boxH = 0
             xLoop@
-            for (x in cellTypeList.rangeX()) {
-                for (y in cellTypeList.rangeY()) {
+            for (x in cellTypeList.rangeX) {
+                for (y in cellTypeList.rangeY) {
                     if (boxX == null || boxY == null) {
                         if (cellTypeList[x, y] == CellType.FAIRWAY) {
                             boxX = x

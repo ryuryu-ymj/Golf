@@ -3,7 +3,7 @@ package io.github.ryuryu_ymj.golf.edit
 import kotlinx.serialization.Serializable
 
 @Serializable
-class MutableArray2d<T>() {
+class MutableList2d<T>() {
     private val topRight = mutableListOf<MutableList<T>>()
     private val topLeft = mutableListOf<MutableList<T>>()
     private val bottomRight = mutableListOf<MutableList<T>>()
@@ -21,10 +21,11 @@ class MutableArray2d<T>() {
     constructor(rangeX: IntRange, rangeY: IntRange, init: (Int, Int) -> T) :
             this(rangeX.first, rangeX.last, rangeY.first, rangeY.last, init)
 
-    fun width() = lastX - firstX + 1
-    fun height() = lastY - firstY + 1
-    fun rangeX() = firstX..lastX
-    fun rangeY() = firstY..lastY
+    val width get() = lastX - firstX + 1
+    val height get() = lastY - firstY + 1
+    val rangeX get() = firstX..lastX
+    val rangeY get() = firstY..lastY
+    val isEmpty get() = width == 0 || height == 0
 
     operator fun get(x: Int, y: Int): T {
         return if (x >= 0) {
@@ -66,7 +67,7 @@ class MutableArray2d<T>() {
         if (bottom > 0) {
             bottomRight.forEachIndexed { x, col ->
                 for (y in firstY - 1 downTo firstY - bottom) {
-                    col.add(init(x, firstY))
+                    col.add(init(x, y))
                 }
             }
             bottomLeft.forEachIndexed { nx, col ->
@@ -113,8 +114,8 @@ class MutableArray2d<T>() {
         bottomLeft.toTypedArray()
     }
 
-    fun <R> map(transform: (T) -> R): MutableArray2d<R> {
-        return MutableArray2d(firstX, lastX, firstY, lastY) { x, y ->
+    fun <R> map(transform: (T) -> R): MutableList2d<R> {
+        return MutableList2d(firstX, lastX, firstY, lastY) { x, y ->
             transform(get(x, y))
         }
     }
@@ -127,9 +128,9 @@ class MutableArray2d<T>() {
     }
 }
 
-inline fun <reified T> MutableArray2d<T>.toArray2d() =
-    Array(width()) { x ->
-        Array(height()) { y ->
+inline fun <reified T> MutableList2d<T>.toArray2d() =
+    Array(width) { x ->
+        Array(height) { y ->
             get(firstX + x, firstY + y)
         }
     }
