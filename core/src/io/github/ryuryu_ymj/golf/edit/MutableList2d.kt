@@ -37,6 +37,16 @@ class MutableList2d<T>() {
         }
     }
 
+    fun getOrNull(x: Int, y: Int): T? {
+        return if (x >= 0) {
+            if (y >= 0) topRight.getOrNull(x)?.getOrNull(y)
+            else bottomRight.getOrNull(x)?.getOrNull(-y - 1)
+        } else {
+            if (y >= 0) topLeft.getOrNull(-x - 1)?.getOrNull(y)
+            else bottomLeft.getOrNull(-x - 1)?.getOrNull(-y - 1)
+        }
+    }
+
     operator fun set(x: Int, y: Int, value: T) {
         if (x >= 0) {
             if (y >= 0) topRight[x][y] = value

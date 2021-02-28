@@ -4,8 +4,11 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.assets.AssetManager
+import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.viewport.FitViewport
 import io.github.ryuryu_ymj.golf.MyInputProcessor
@@ -14,13 +17,14 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ktx.app.KtxScreen
+import ktx.graphics.use
+import ktx.math.vec2
 import java.io.PrintWriter
 import java.lang.Exception
+import kotlin.math.max
+import kotlin.math.min
 
-internal var startX = 0
-internal var startY = 0
-
-class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
+class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
     private val batch = SpriteBatch()
     private val camera = OrthographicCamera(4f, 2.25f)
     private val viewport = FitViewport(
@@ -34,24 +38,39 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         it.addProcessor(stage)
         it.addProcessor(MyInputProcessor(viewport, this))
     }
+    private val shape = ShapeRenderer()
 
-    private val cellList = MutableList2d<Cell>()
+    private val cellList: MutableList2d<Cell>
+
+    private var startX = 0
+    private var startY = 0
+    private var isSelecting = false
+    private val selectBegin = vec2()
+    private val selectEnd = vec2()
+    
+    private val brush = Brush(asset)
 
     init {
         camera.position.setZero()
-        uiStage.addActor(Brush(asset))
+        uiStage.addActor(brush)
+
+        fun defaultCellList() = MutableList2d(-10..10, -10..10) { x, y ->
+            Cell(asset, x, y).also {
+                stage.addActor(it)
+                if (x == startX && y == startY) {
+                    it.type = CellType.START
+                }
+            }
+        }
 
         val file = Gdx.files.internal("course/01raw")
-        if (file.exists()) {
+        cellList = if (file.exists()) {
             try {
-                val cellType = Json.decodeFromString<MutableList2d<CellType>>(file.readString())
-                cellList.add(
-                    cellType.rangeX.last + 1, -cellType.rangeX.first,
-                    cellType.rangeY.last + 1, -cellType.rangeY.first
-                ) { x, y ->
-                    Cell(asset, cellList, x, y).also {
+                val read = Json.decodeFromString<MutableList2d<CellType>>(file.readString())
+                MutableList2d(read.rangeX, read.rangeY) { x, y ->
+                    Cell(asset, x, y).also {
                         stage.addActor(it)
-                        it.type = cellType[x, y]
+                        it.type = read[x, y]
                         if (it.type == CellType.START) {
                             startX = x
                             startY = y
@@ -59,18 +78,10 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
                     }
                 }
             } catch (e: Exception) {
+                defaultCellList()
             }
-        }
-
-        if (cellList.isEmpty) {
-            cellList.add(10, 10, 10, 10) { x, y ->
-                Cell(asset, cellList, x, y).also {
-                    stage.addActor(it)
-                    if (x == startX && y == startY) {
-                        it.type = CellType.START
-                    }
-                }
-            }
+        } else {
+            defaultCellList()
         }
     }
 
@@ -90,6 +101,18 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
     override fun render(delta: Float) {
         stage.draw()
         uiStage.draw()
+        if (isSelecting) {
+            Gdx.gl.glEnable(GL20.GL_BLEND)
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
+            shape.use(ShapeRenderer.ShapeType.Filled, camera.combined) {
+                it.setColor(1f, 0f, 0f, 0.2f)
+                it.rect(
+                    selectBegin.x, selectBegin.y,
+                    selectEnd.x - selectBegin.x, selectEnd.y - selectBegin.y
+                )
+            }
+            Gdx.gl.glDisable(GL20.GL_BLEND)
+        }
 
         stage.act()
         uiStage.act()
@@ -117,14 +140,79 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
     }
 
     override fun touchDown(x: Float, y: Float): Boolean {
+        val brushType = brush.type ?: return false
+        val cell = cellList.getOrNull(
+            MathUtils.floor(x / CELL_SIZE),
+            MathUtils.floor(y / CELL_SIZE)
+        ) ?: return false
+        if (cell.type != brushType && cell.type != CellType.START) {
+            cell.type = brushType
+            if (brushType == CellType.START) {
+                cellList[startX, startY].type = CellType.NULL
+                startX = cell.ix
+                startY = cell.iy
+            }
+
+            val margin = 3
+            if (cellList.lastX - cell.ix < margin) {
+                cellList.add(right = margin * 2) { ix, iy ->
+                    Cell(asset, ix, iy).also {
+                        stage.addActor(it)
+                    }
+                }
+            } else if (cell.ix - cellList.firstX < margin) {
+                cellList.add(left = margin * 2) { ix, iy ->
+                    Cell(asset, ix, iy).also {
+                        stage.addActor(it)
+                    }
+                }
+            }
+            if (cellList.lastY - cell.iy < margin) {
+                cellList.add(top = margin * 2) { ix, iy ->
+                    Cell(asset, ix, iy).also {
+                        stage.addActor(it)
+                    }
+                }
+            } else if (cell.iy - cellList.firstY < margin) {
+                cellList.add(bottom = margin * 2) { ix, iy ->
+                    Cell(asset, ix, iy).also {
+                        stage.addActor(it)
+                    }
+                }
+            }
+            isSelecting = true
+            selectBegin.set(x, y)
+            selectEnd.set(x, y)
+            return true
+        }
         return false
     }
 
     override fun touchDragged(x: Float, y: Float): Boolean {
+        if (isSelecting) {
+            selectEnd.set(x, y)
+            return true
+        }
         return false
     }
 
     override fun touchUp(x: Float, y: Float): Boolean {
+        val brushType = brush.type ?: return false
+        if (isSelecting) {
+            isSelecting = false
+            val beginIX = MathUtils.floor(selectBegin.x / CELL_SIZE)
+            val beginIY = MathUtils.floor(selectBegin.y / CELL_SIZE)
+            val endIX = MathUtils.floor(selectEnd.x / CELL_SIZE)
+            val endIY = MathUtils.floor(selectEnd.y / CELL_SIZE)
+            val rangeX = min(beginIX, endIX)..max(beginIX, endIX)
+            val rangeY = min(beginIY, endIY)..max(beginIY, endIY)
+            for (ix in rangeX) {
+                for (iy in rangeY) {
+                    cellList[ix, iy].type = brushType
+                }
+            }
+            return true
+        }
         return false
     }
 
