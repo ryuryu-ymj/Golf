@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 import ktx.box2d.body
 import ktx.box2d.circle
 
+const val BALL_SIZE = 0.05f
 private const val NORMAL_DAMPING = 0.1f
 //private const val LARGE_DAMPING = 0.4f
 
@@ -21,7 +22,7 @@ class Ball(asset: AssetManager, world: World, x: Float, y: Float) : Actor() {
 
     init {
         setPosition(x, y)
-        setSize(0.05f, 0.05f)
+        setSize(BALL_SIZE, BALL_SIZE)
         setOrigin(width / 2, height / 2)
         body = world.body {
             circle(radius = width / 2) {

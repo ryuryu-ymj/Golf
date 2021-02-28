@@ -34,13 +34,25 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
 
     private val cellList: GdxArray2d<Cell>
 
+    private var startX = 0
+    private var startY = 0
+
+    internal fun setStart(x: Int, y: Int) {
+        cellList[startX, startY].type = CellType.NULL
+        startX = x
+        startY = y
+    }
+
     init {
         camera.position.setZero()
         uiStage.addActor(Brush(asset))
 
         fun defaultCellList() = GdxArray2d(-10..10, -10..10) { x, y ->
-            Cell(asset, x, y).also {
+            Cell(asset, this, x, y).also {
                 stage.addActor(it)
+                if (x == startX && y == startY) {
+                    it.type = CellType.START
+                }
             }
         }
 
@@ -50,9 +62,13 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
                 try {
                     val read = Json.decodeFromString<GdxArray2d<CellType>>(file.readString())
                     GdxArray2d(read.rangeX(), read.rangeY()) { x, y ->
-                        Cell(asset, x, y).also {
+                        Cell(asset, this, x, y).also {
                             stage.addActor(it)
                             it.type = read[x, y]
+                            if (it.type == CellType.START) {
+                                startX = x
+                                startY = y
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -82,13 +98,15 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
 
         stage.act()
         uiStage.act()
-        if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
+            Gdx.input.isKeyJustPressed(Input.Keys.S)
+        ) {
             val cellTypeList = cellList.map { it.type }
             val file = Gdx.files.local("course/01raw")
             file.writeString(Json.encodeToString(cellTypeList), false)
             println("save edit file to course/01raw")
 
-            saveBodyFile(cellTypeList.toArray2d())
+            saveBody(cellTypeList)
         }
     }
 
@@ -109,48 +127,45 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         batch.dispose()
     }
 
-    private fun saveBodyFile(cells: Array<Array<CellType>>) {
+    private fun saveBody(cellTypeList: GdxArray2d<CellType>) {
         val file = Gdx.files.local("course/01body")
         val writer = PrintWriter(file.writer(false))
-        val startX = 0
-        val startY = 0
 
         while (true) {
-            var boxX = -1
-            var boxY = -1
+            var boxX: Int? = null
+            var boxY: Int? = null
             var boxW = 0
             var boxH = 0
             xLoop@
-            for (x in cells.indices) {
-                for (y in cells[x].indices) {
-                    if (boxX == -1) {
-                        if (cells[x][y] == CellType.FAIRWAY) {
+            for (x in cellTypeList.rangeX()) {
+                for (y in cellTypeList.rangeY()) {
+                    if (boxX == null || boxY == null) {
+                        if (cellTypeList[x, y] == CellType.FAIRWAY) {
                             boxX = x
                             boxY = y
                         }
                     } else if (boxH == 0) {
-                        if (cells[x][y] != CellType.FAIRWAY) {
+                        if (cellTypeList[x, y] != CellType.FAIRWAY) {
                             boxH = y - boxY
-                        } else if (y == cells[x].lastIndex) {
+                        } else if (y == cellTypeList.lastY) {
                             boxH = y + 1 - boxY
                         }
                     } else if (y < boxY) {
                         continue
                     } else if (y >= boxY + boxH) {
                         break
-                    } else if (cells[x][y] != CellType.FAIRWAY) {
+                    } else if (cellTypeList[x, y] != CellType.FAIRWAY) {
                         boxW = x - boxX
                         break@xLoop
-                    } else if (x == cells.lastIndex) {
+                    } else if (x == cellTypeList.lastY) {
                         boxW = x + 1 - boxX
                     }
                 }
             }
-            if (boxX == -1) break
-            println("$boxX, $boxY, $boxW, $boxH")
+            if (boxX == null || boxY == null) break
             for (x in boxX until boxX + boxW) {
                 for (y in boxY until boxY + boxH) {
-                    cells[x][y] = CellType.NULL
+                    cellTypeList[x, y] = CellType.NULL
                 }
             }
             val x = (boxX - startX) * CELL_SIZE

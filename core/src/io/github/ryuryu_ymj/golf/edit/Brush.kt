@@ -18,12 +18,15 @@ class Brush(private val asset: AssetManager) : Actor() {
     override fun act(delta: Float) {
         super.act(delta)
         when {
-            Gdx.input.isKeyPressed(Input.Keys.F) ->
-                brushType = CellType.FAIRWAY
-            Gdx.input.isKeyPressed(Input.Keys.N) ->
-                brushType = CellType.NULL
             Gdx.input.isKeyPressed(Input.Keys.M) ->
                 brushType = null
+            Gdx.input.isKeyPressed(Input.Keys.N) ->
+                brushType = CellType.NULL
+            Gdx.input.isKeyPressed(Input.Keys.S) &&
+                    !Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) ->
+                brushType = CellType.START
+            Gdx.input.isKeyPressed(Input.Keys.F) ->
+                brushType = CellType.FAIRWAY
         }
     }
 

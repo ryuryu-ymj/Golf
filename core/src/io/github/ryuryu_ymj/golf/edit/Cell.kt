@@ -5,11 +5,15 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.InputEvent
+import io.github.ryuryu_ymj.golf.BALL_SIZE
 import ktx.actors.KtxInputListener
 
 const val CELL_SIZE = 0.2f
 
-class Cell(private val asset: AssetManager, ix: Int, iy: Int) : Actor() {
+class Cell(
+    private val asset: AssetManager, editScreen: EditScreen,
+    ix: Int, iy: Int
+) : Actor() {
     var type = CellType.NULL
 
     init {
@@ -18,8 +22,13 @@ class Cell(private val asset: AssetManager, ix: Int, iy: Int) : Actor() {
         addListener(object : KtxInputListener() {
             override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
                 brushType?.let {
-                    type = it
-                    return true
+                    if (type != it && type != CellType.START) {
+                        type = it
+                        if (it == CellType.START) {
+                            editScreen.setStart(ix, iy)
+                        }
+                        return true
+                    }
                 }
                 return false
             }
@@ -27,11 +36,21 @@ class Cell(private val asset: AssetManager, ix: Int, iy: Int) : Actor() {
     }
 
     override fun draw(batch: Batch, parentAlpha: Float) {
-        val texture = asset.get<Texture>(type.path)
-        batch.draw(texture, x, y, width, height)
+        if (type != CellType.START) {
+            val texture = asset.get<Texture>(type.path)
+            batch.draw(texture, x, y, width, height)
+        } else {
+            val ball = asset.get<Texture>(CellType.START.path)
+            val cell = asset.get<Texture>(CellType.NULL.path)
+            batch.draw(cell, x, y, width, height)
+            batch.draw(
+                ball, x + width / 2 - BALL_SIZE / 2, y,
+                BALL_SIZE, BALL_SIZE
+            )
+        }
     }
 }
 
 enum class CellType(val path: String) {
-    NULL("image/cell.png"), FAIRWAY("image/fairway.png")
+    NULL("image/cell.png"), START("image/ball.png"), FAIRWAY("image/fairway.png")
 }

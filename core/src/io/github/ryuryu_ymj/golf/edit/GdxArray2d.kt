@@ -9,26 +9,22 @@ class GdxArray2d<T>() {
     private val bottomRight = mutableListOf<MutableList<T>>()
     private val bottomLeft = mutableListOf<MutableList<T>>()
 
-    private var w1 = 0
-    private var w2 = 0
-    private var h1 = 0
-    private var h2 = 0
+    var firstX = 0; private set
+    var lastX = -1; private set
+    var firstY = 0; private set
+    var lastY = -1; private set
 
-    constructor(startX: Int, endX: Int, startY: Int, endY: Int, init: (Int, Int) -> T) : this() {
-        add(endX + 1, -startX, endY + 1, -startY, init)
+    constructor(firstX: Int, lastX: Int, firstY: Int, lastY: Int, init: (Int, Int) -> T) : this() {
+        add(lastX + 1, -firstX, lastY + 1, -firstY, init)
     }
 
     constructor(rangeX: IntRange, rangeY: IntRange, init: (Int, Int) -> T) :
             this(rangeX.first, rangeX.last, rangeY.first, rangeY.last, init)
 
-    fun width() = w1 + w2
-    fun height() = h1 + h2
-    fun startX() = -w2
-    fun endX() = w1 - 1
-    fun startY() = -h2
-    fun endY() = h1 - 1
-    fun rangeX() = startX()..endX()
-    fun rangeY() = startY()..endY()
+    fun width() = lastX - firstX + 1
+    fun height() = lastY - firstY + 1
+    fun rangeX() = firstX..lastX
+    fun rangeY() = firstY..lastY
 
     operator fun get(x: Int, y: Int): T {
         return if (x >= 0) {
@@ -56,69 +52,69 @@ class GdxArray2d<T>() {
     ) {
         if (top > 0) {
             topRight.forEachIndexed { x, col ->
-                for (y in h1 until h1 + top) {
+                for (y in lastY + 1..lastY + top) {
                     col.add(init(x, y))
                 }
             }
             topLeft.forEachIndexed { nx, col ->
-                for (y in h1 until h1 + top) {
+                for (y in lastY + 1..lastY + top) {
                     col.add(init(-nx - 1, y))
                 }
             }
-            h1 += top
+            lastY += top
         }
         if (bottom > 0) {
             bottomRight.forEachIndexed { x, col ->
-                for (ny in h2 until h2 + bottom) {
-                    col.add(init(x, -ny - 1))
+                for (y in firstY - bottom until firstY) {
+                    col.add(init(x, firstY))
                 }
             }
             bottomLeft.forEachIndexed { nx, col ->
-                for (ny in h2 until h2 + bottom) {
-                    col.add(init(-nx - 1, -ny - 1))
+                for (y in firstY - bottom until firstY) {
+                    col.add(init(-nx - 1, y))
                 }
             }
-            h2 += bottom
+            firstY -= bottom
         }
         if (right > 0) {
-            for (x in w1 until w1 + right) {
+            for (x in lastX + 1..lastX + right) {
                 val col = mutableListOf<T>()
-                for (y in 0 until h1) {
+                for (y in 0..lastY) {
                     col.add(init(x, y))
                 }
                 topRight.add(col)
             }
-            for (x in w1 until w1 + right) {
+            for (x in lastX + 1..lastX + right) {
                 val col = mutableListOf<T>()
-                for (ny in 0 until h2) {
-                    col.add(init(x, -ny - 1))
+                for (y in firstY until 0) {
+                    col.add(init(x, y))
                 }
                 bottomRight.add(col)
             }
-            w1 += right
+            lastX += right
         }
         if (left > 0) {
-            for (nx in w2 until w2 + left) {
+            for (x in firstX - left until firstX) {
                 val col = mutableListOf<T>()
-                for (y in 0 until h1) {
-                    col.add(init(-nx - 1, y))
+                for (y in 0..lastY) {
+                    col.add(init(x, y))
                 }
                 topLeft.add(col)
             }
-            for (nx in w2 until w2 + left) {
+            for (x in firstX - left until firstX) {
                 val col = mutableListOf<T>()
-                for (ny in 0 until h2) {
-                    col.add(init(-nx - 1, -ny - 1))
+                for (y in firstY until 0) {
+                    col.add(init(x, y))
                 }
                 bottomLeft.add(col)
             }
-            w2 += left
+            firstX -= left
         }
         bottomLeft.toTypedArray()
     }
 
     fun <R> map(transform: (T) -> R): GdxArray2d<R> {
-        return GdxArray2d(startX(), endX(), startY(), endY()) { x, y ->
+        return GdxArray2d(firstX, lastX, firstY, lastY) { x, y ->
             transform(get(x, y))
         }
     }
@@ -127,6 +123,6 @@ class GdxArray2d<T>() {
 inline fun <reified T> GdxArray2d<T>.toArray2d() =
     Array(width()) { x ->
         Array(height()) { y ->
-            get(startX() + x, startY() + y)
+            get(firstX + x, firstY + y)
         }
     }
