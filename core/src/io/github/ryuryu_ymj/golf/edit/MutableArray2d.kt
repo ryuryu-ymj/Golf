@@ -3,7 +3,7 @@ package io.github.ryuryu_ymj.golf.edit
 import kotlinx.serialization.Serializable
 
 @Serializable
-class GdxArray2d<T>() {
+class MutableArray2d<T>() {
     private val topRight = mutableListOf<MutableList<T>>()
     private val topLeft = mutableListOf<MutableList<T>>()
     private val bottomRight = mutableListOf<MutableList<T>>()
@@ -65,12 +65,12 @@ class GdxArray2d<T>() {
         }
         if (bottom > 0) {
             bottomRight.forEachIndexed { x, col ->
-                for (y in firstY - bottom until firstY) {
+                for (y in firstY - 1 downTo firstY - bottom) {
                     col.add(init(x, firstY))
                 }
             }
             bottomLeft.forEachIndexed { nx, col ->
-                for (y in firstY - bottom until firstY) {
+                for (y in firstY - 1 downTo firstY - bottom) {
                     col.add(init(-nx - 1, y))
                 }
             }
@@ -86,7 +86,7 @@ class GdxArray2d<T>() {
             }
             for (x in lastX + 1..lastX + right) {
                 val col = mutableListOf<T>()
-                for (y in firstY until 0) {
+                for (y in -1 downTo firstY) {
                     col.add(init(x, y))
                 }
                 bottomRight.add(col)
@@ -94,16 +94,16 @@ class GdxArray2d<T>() {
             lastX += right
         }
         if (left > 0) {
-            for (x in firstX - left until firstX) {
+            for (x in firstX - 1 downTo firstX - left) {
                 val col = mutableListOf<T>()
                 for (y in 0..lastY) {
                     col.add(init(x, y))
                 }
                 topLeft.add(col)
             }
-            for (x in firstX - left until firstX) {
+            for (x in firstX - 1 downTo firstX - left) {
                 val col = mutableListOf<T>()
-                for (y in firstY until 0) {
+                for (y in -1 downTo firstY) {
                     col.add(init(x, y))
                 }
                 bottomLeft.add(col)
@@ -113,14 +113,21 @@ class GdxArray2d<T>() {
         bottomLeft.toTypedArray()
     }
 
-    fun <R> map(transform: (T) -> R): GdxArray2d<R> {
-        return GdxArray2d(firstX, lastX, firstY, lastY) { x, y ->
+    fun <R> map(transform: (T) -> R): MutableArray2d<R> {
+        return MutableArray2d(firstX, lastX, firstY, lastY) { x, y ->
             transform(get(x, y))
         }
     }
+
+    fun forEach(action: (T) -> Unit) {
+        topRight.forEach { it.forEach(action) }
+        topLeft.forEach { it.forEach(action) }
+        bottomRight.forEach { it.forEach(action) }
+        bottomLeft.forEach { it.forEach(action) }
+    }
 }
 
-inline fun <reified T> GdxArray2d<T>.toArray2d() =
+inline fun <reified T> MutableArray2d<T>.toArray2d() =
     Array(width()) { x ->
         Array(height()) { y ->
             get(firstX + x, firstY + y)

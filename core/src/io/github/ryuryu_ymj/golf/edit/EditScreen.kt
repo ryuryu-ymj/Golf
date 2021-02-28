@@ -6,6 +6,7 @@ import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.viewport.FitViewport
 import io.github.ryuryu_ymj.golf.MyInputProcessor
@@ -13,6 +14,7 @@ import io.github.ryuryu_ymj.golf.MyTouchable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import ktx.actors.KtxInputListener
 import ktx.app.KtxScreen
 import java.io.PrintWriter
 import java.lang.Exception
@@ -32,23 +34,17 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         it.addProcessor(MyInputProcessor(viewport, this))
     }
 
-    private val cellList: GdxArray2d<Cell>
+    private val cellList: MutableArray2d<Cell>
 
     private var startX = 0
     private var startY = 0
-
-    internal fun setStart(x: Int, y: Int) {
-        cellList[startX, startY].type = CellType.NULL
-        startX = x
-        startY = y
-    }
 
     init {
         camera.position.setZero()
         uiStage.addActor(Brush(asset))
 
-        fun defaultCellList() = GdxArray2d(-10..10, -10..10) { x, y ->
-            Cell(asset, this, x, y).also {
+        fun defaultCellList() = MutableArray2d(-10..10, -10..10) { x, y ->
+            Cell(asset, x, y).also {
                 stage.addActor(it)
                 if (x == startX && y == startY) {
                     it.type = CellType.START
@@ -57,26 +53,49 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         }
 
         val file = Gdx.files.internal("course/01raw")
-        cellList =
-            if (file.exists()) {
-                try {
-                    val read = Json.decodeFromString<GdxArray2d<CellType>>(file.readString())
-                    GdxArray2d(read.rangeX(), read.rangeY()) { x, y ->
-                        Cell(asset, this, x, y).also {
-                            stage.addActor(it)
-                            it.type = read[x, y]
-                            if (it.type == CellType.START) {
-                                startX = x
-                                startY = y
-                            }
+        cellList = if (file.exists()) {
+            try {
+                val read = Json.decodeFromString<MutableArray2d<CellType>>(file.readString())
+                MutableArray2d(read.rangeX(), read.rangeY()) { x, y ->
+                    Cell(asset, x, y).also {
+                        stage.addActor(it)
+                        it.type = read[x, y]
+                        if (it.type == CellType.START) {
+                            startX = x
+                            startY = y
                         }
                     }
-                } catch (e: Exception) {
-                    defaultCellList()
                 }
-            } else {
+            } catch (e: Exception) {
                 defaultCellList()
             }
+        } else {
+            defaultCellList()
+        }
+
+        cellList.forEach {
+            it.addListener(object : KtxInputListener() {
+                override fun touchDown(
+                    event: InputEvent,
+                    x: Float,
+                    y: Float,
+                    pointer: Int,
+                    button: Int
+                ): Boolean {
+                    val brushType = brushType ?: return false
+                    if (it.type != brushType && it.type != CellType.START) {
+                        it.type = brushType
+                        if (brushType == CellType.START) {
+                            cellList[startX, startY].type = CellType.NULL
+                            startX = it.ix
+                            startY = it.iy
+                        }
+                        return true
+                    }
+                    return false
+                }
+            })
+        }
     }
 
     override fun show() {
@@ -127,7 +146,7 @@ class EditScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         batch.dispose()
     }
 
-    private fun saveBody(cellTypeList: GdxArray2d<CellType>) {
+    private fun saveBody(cellTypeList: MutableArray2d<CellType>) {
         val file = Gdx.files.local("course/01body")
         val writer = PrintWriter(file.writer(false))
 
