@@ -13,7 +13,7 @@ const val BALL_SIZE = 0.05f
 private const val NORMAL_DAMPING = 0.1f
 //private const val LARGE_DAMPING = 0.4f
 
-class Ball(asset: AssetManager, world: World, x: Float, y: Float) : Actor() {
+class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : Actor() {
     val body: Body
     private val texture = asset.get<Texture>("image/ball.png")
     private var lastSpeed = 0f
@@ -21,9 +21,9 @@ class Ball(asset: AssetManager, world: World, x: Float, y: Float) : Actor() {
     private var contactCount = 0
 
     init {
-        setPosition(x, y)
         setSize(BALL_SIZE, BALL_SIZE)
         setOrigin(width / 2, height / 2)
+        setPosition(centerX - originX, bottomY)
         body = world.body {
             circle(radius = width / 2) {
                 density = 20f

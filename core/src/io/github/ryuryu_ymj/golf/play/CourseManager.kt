@@ -10,21 +10,19 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.GdxRuntimeException
 import ktx.actors.plusAssign
 import ktx.box2d.body
+import ktx.box2d.box
 import ktx.box2d.polygon
+import ktx.math.vec2
 
-class CourseManager(
-    private val stage: Stage,
-    private val world: World
-) {
-    //private var coursePixmap: Pixmap? = null
+class CourseManager {
     private var texture: Texture? = null
 
-    fun readCourse(index: Int) {
-        createBody(index)
+    fun readCourse(index: Int, stage: Stage, world: World) {
+        createBody(index, world)
         //createTexture(index)
     }
 
-    private fun createBody(index: Int) {
+    private fun createBody(index: Int, world: World) {
         val file: FileHandle
         try {
             file = Gdx.files.internal("course/${"%02d".format(index)}body")
@@ -37,20 +35,40 @@ class CourseManager(
             if (cells.isEmpty()) continue
             when (cells[0]) {
                 "fairway" -> {
-                    val vertices = FloatArray(8) { cells[it + 1].toFloat() }
-                    world.body {
-                        polygon(vertices) {
-                            restitution = 0f
-                            friction = 0.5f
+                    when (cells[1]) {
+                        "box" -> {
+                            val x = cells[2].toFloat()
+                            val y = cells[3].toFloat()
+                            val w = cells[4].toFloat()
+                            val h = cells[5].toFloat()
+                            world.body {
+                                box(width = w, height = h, position = vec2(w / 2, h / 2)) {
+                                    restitution = 0f
+                                    friction = 0.5f
+                                }
+                                position.set(x, y)
+                                type = BodyDef.BodyType.StaticBody
+                                userData = GroundType.FAIRWAY
+                            }
                         }
-                        type = BodyDef.BodyType.StaticBody
-                        userData = GroundType.FAIRWAY
+                        "polygon" -> {
+                            val vertices = FloatArray(8) { cells[it + 1].toFloat() }
+                            world.body {
+                                polygon(vertices) {
+                                    restitution = 0f
+                                    friction = 0.5f
+                                }
+                                type = BodyDef.BodyType.StaticBody
+                                userData = GroundType.FAIRWAY
+                            }
+                        }
                     }
                 }
             }
-        }}
+        }
+    }
 
-    private fun createTexture(index: Int) {
+    private fun createTexture(index: Int, stage: Stage) {
         val file = Gdx.files.internal("course/${"%02d".format(index)}pixmap")
         val lines = file.readString().lines()
 

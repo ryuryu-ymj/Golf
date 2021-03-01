@@ -3,28 +3,30 @@ package io.github.ryuryu_ymj.golf.edit
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputMultiplexer
-import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.utils.viewport.FitViewport
-import io.github.ryuryu_ymj.golf.play.MyInputProcessor
-import io.github.ryuryu_ymj.golf.play.MyTouchable
+import io.github.ryuryu_ymj.golf.MyGame
+import io.github.ryuryu_ymj.golf.play.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ktx.app.KtxScreen
 import ktx.graphics.use
 import ktx.math.vec2
+import ktx.scene2d.actors
+import ktx.scene2d.table
+import ktx.scene2d.textField
 import java.io.PrintWriter
-import java.lang.Exception
 import kotlin.math.max
 import kotlin.math.min
 
-class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
+class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     private val batch = SpriteBatch()
     private val camera = OrthographicCamera(4f, 2.25f)
     private val viewport = FitViewport(
@@ -35,27 +37,40 @@ class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
     private val uiViewport = FitViewport(1600f, 900f)
     private val uiStage = Stage(uiViewport, batch)
     private val input = InputMultiplexer().also {
+        it.addProcessor(uiStage)
         it.addProcessor(stage)
         it.addProcessor(MyInputProcessor(viewport, this))
     }
     private val shape = ShapeRenderer()
 
-    private val cellList: MutableList2d<Cell>
+    private lateinit var cellList: MutableList2d<Cell>
 
     private var startX = 0
     private var startY = 0
     private var isSelecting = false
     private val selectBegin = vec2()
     private val selectEnd = vec2()
-    
-    private val brush = Brush(asset)
+
+    private val brush = Brush(game.asset)
+    private val courseIndexField: TextField
 
     init {
-        camera.position.setZero()
         uiStage.addActor(brush)
+        uiStage.actors {
+            table {
+                setFillParent(true)
+                //debug = true
+                right().top()
+                courseIndexField = textField(text = courseIndex.toString())
+            }
+        }
+    }
+
+    override fun show() {
+        camera.position.setZero()
 
         fun defaultCellList() = MutableList2d(-10..10, -10..10) { x, y ->
-            Cell(asset, x, y).also {
+            Cell(game.asset, x, y).also {
                 stage.addActor(it)
                 if (x == startX && y == startY) {
                     it.type = CellType.START
@@ -63,12 +78,12 @@ class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
             }
         }
 
-        val file = Gdx.files.internal("course/01raw")
+        val file = Gdx.files.internal("course/${"%02d".format(courseIndex)}raw")
         cellList = if (file.exists()) {
             try {
                 val read = Json.decodeFromString<MutableList2d<CellType>>(file.readString())
                 MutableList2d(read.rangeX, read.rangeY) { x, y ->
-                    Cell(asset, x, y).also {
+                    Cell(game.asset, x, y).also {
                         stage.addActor(it)
                         it.type = read[x, y]
                         if (it.type == CellType.START) {
@@ -83,13 +98,12 @@ class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
         } else {
             defaultCellList()
         }
-    }
 
-    override fun show() {
         Gdx.input.inputProcessor = input
     }
 
     override fun hide() {
+        stage.clear()
         Gdx.input.inputProcessor = null
     }
 
@@ -121,9 +135,9 @@ class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
         ) {
             // save
             val cellTypeList = cellList.map { it.type }
-            val file = Gdx.files.local("course/01raw")
+            val file = Gdx.files.local("course/${"%02d".format(courseIndex)}raw")
             file.writeString(Json.encodeToString(cellTypeList), false)
-            println("save edit file to course/01raw")
+            println("save edit file to course/${"%02d".format(courseIndex)}raw")
 
             saveBody(cellTypeList)
         } else if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
@@ -135,6 +149,22 @@ class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
                 if (it.type != CellType.START) {
                     it.type = CellType.NULL
                 }
+            }
+        } else if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
+            Gdx.input.isKeyJustPressed(Input.Keys.P)
+        ) {
+            // move to playScreen
+            game.setScreen<PlayScreen>()
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER) &&
+            courseIndexField.hasKeyboardFocus()
+        ) {
+            uiStage.unfocusAll()
+            // open a new course
+            try {
+                courseIndex = courseIndexField.text.toInt()
+                game.setScreen<EditScreen>()
+            } catch (e: NumberFormatException) {
+                println("invalid input : " + courseIndexField.text)
             }
         }
     }
@@ -156,26 +186,26 @@ class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
             val margin = 3
             if (cellList.lastX - cell.ix < margin) {
                 cellList.add(right = margin * 2) { ix, iy ->
-                    Cell(asset, ix, iy).also {
+                    Cell(game.asset, ix, iy).also {
                         stage.addActor(it)
                     }
                 }
             } else if (cell.ix - cellList.firstX < margin) {
                 cellList.add(left = margin * 2) { ix, iy ->
-                    Cell(asset, ix, iy).also {
+                    Cell(game.asset, ix, iy).also {
                         stage.addActor(it)
                     }
                 }
             }
             if (cellList.lastY - cell.iy < margin) {
                 cellList.add(top = margin * 2) { ix, iy ->
-                    Cell(asset, ix, iy).also {
+                    Cell(game.asset, ix, iy).also {
                         stage.addActor(it)
                     }
                 }
             } else if (cell.iy - cellList.firstY < margin) {
                 cellList.add(bottom = margin * 2) { ix, iy ->
-                    Cell(asset, ix, iy).also {
+                    Cell(game.asset, ix, iy).also {
                         stage.addActor(it)
                     }
                 }
@@ -222,7 +252,7 @@ class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
     }
 
     private fun saveBody(cellTypeList: MutableList2d<CellType>) {
-        val file = Gdx.files.local("course/01body")
+        val file = Gdx.files.local("course/${"%02d".format(courseIndex)}body")
         val writer = PrintWriter(file.writer(false))
 
         while (true) {
@@ -262,13 +292,13 @@ class EditScreen(private val asset: AssetManager) : KtxScreen, MyTouchable {
                     cellTypeList[x, y] = CellType.NULL
                 }
             }
-            val x = (boxX - startX) * CELL_SIZE
+            val x = (boxX - startX) * CELL_SIZE - CELL_SIZE / 2
             val y = (boxY - startY) * CELL_SIZE
             val width = boxW * CELL_SIZE
             val height = boxH * CELL_SIZE
             writer.println("fairway,box,${x}f,${y}f,${width}f,${height}f")
         }
         writer.close()
-        println("save body file to course/01body")
+        println("save body file to course/${"%02d".format(courseIndex)}body")
     }
 }

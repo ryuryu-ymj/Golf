@@ -1,20 +1,25 @@
 package io.github.ryuryu_ymj.golf.play
 
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.assets.AssetManager
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer
+import com.badlogic.gdx.physics.box2d.World
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.viewport.FitViewport
+import io.github.ryuryu_ymj.golf.MyGame
+import io.github.ryuryu_ymj.golf.edit.EditScreen
 import ktx.actors.plusAssign
 import ktx.app.KtxScreen
 import ktx.box2d.createWorld
 import ktx.math.vec2
 import kotlin.math.hypot
 
-class PlayScreen(asset: AssetManager) : KtxScreen, MyTouchable {
+var courseIndex = 1
+
+class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     private val batch = SpriteBatch()
     private val camera = OrthographicCamera(4f, 2.25f)
     private val viewport = FitViewport(
@@ -22,32 +27,37 @@ class PlayScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         camera.viewportHeight, camera
     )
     private val stage = Stage(viewport, batch)
-    private val world = createWorld(vec2(0f, -10f))
+
+    private val gravity = vec2(0f, -10f)
+    private lateinit var world: World
     private val debugRenderer = Box2DDebugRenderer()
+
     private val input = MyInputProcessor(viewport, this)
     private var isDraggingArrow = false
 
-    private val bg = BackGround(stage.width, stage.height)
-    private val ball = Ball(asset, world, 0f, 1f)
+    //private val bg = BackGround(stage.width, stage.height)
+    private lateinit var ball: Ball
     private val arrow = DirectingArrow()
     //private val fairways = GdxArray<Ground>()
 
-    private val course = CourseManager(stage, world)
-
-    init {
-        camera.position.x = 0f
-
-        stage += bg
-        //course.readCourse(1)
-        stage += ball
-        stage += arrow
-    }
+    private val course = CourseManager()
 
     override fun show() {
+        world = createWorld(gravity)
+        ball = Ball(game.asset, world, 0f, 0f)
+
+        camera.position.set(ball.centerX, ball.centerY, 0f)
+        //stage += bg
+        course.readCourse(courseIndex, stage, world)
+        stage += ball
+        stage += arrow
+
         Gdx.input.inputProcessor = input
     }
 
     override fun hide() {
+        world.dispose()
+        stage.clear()
         Gdx.input.inputProcessor = null
     }
 
@@ -65,6 +75,11 @@ class PlayScreen(asset: AssetManager) : KtxScreen, MyTouchable {
         if (ball.body.isAwake) {
             camera.position.set(ball.x, ball.y, 0f)
             if (input.isDragging) input.cancelDragging()
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
+            Gdx.input.isKeyJustPressed(Input.Keys.E)
+        ) {
+            game.setScreen<EditScreen>()
         }
     }
 
@@ -111,10 +126,9 @@ class PlayScreen(asset: AssetManager) : KtxScreen, MyTouchable {
 
     override fun dispose() {
         course.dispose()
-        bg.dispose()
+        //bg.dispose()
         arrow.dispose()
         debugRenderer.dispose()
-        world.dispose()
         stage.dispose()
         batch.dispose()
     }
