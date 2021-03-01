@@ -3,6 +3,7 @@ package io.github.ryuryu_ymj.golf
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.Texture
 import io.github.ryuryu_ymj.golf.edit.EditScreen
+import io.github.ryuryu_ymj.golf.play.PlayScreen
 import ktx.app.KtxGame
 import ktx.app.KtxScreen
 import ktx.assets.load

@@ -11,8 +11,8 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.viewport.FitViewport
-import io.github.ryuryu_ymj.golf.MyInputProcessor
-import io.github.ryuryu_ymj.golf.MyTouchable
+import io.github.ryuryu_ymj.golf.play.MyInputProcessor
+import io.github.ryuryu_ymj.golf.play.MyTouchable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

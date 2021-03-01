@@ -1,4 +1,4 @@
-package io.github.ryuryu_ymj.golf
+package io.github.ryuryu_ymj.golf.play
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.files.FileHandle

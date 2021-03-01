@@ -1,4 +1,4 @@
-package io.github.ryuryu_ymj.golf
+package io.github.ryuryu_ymj.golf.play
 
 /**
  * 地面の種類を表す列挙型

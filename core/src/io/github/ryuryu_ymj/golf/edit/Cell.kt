@@ -4,7 +4,7 @@ import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
-import io.github.ryuryu_ymj.golf.BALL_SIZE
+import io.github.ryuryu_ymj.golf.play.BALL_SIZE
 
 const val CELL_SIZE = 0.2f
 

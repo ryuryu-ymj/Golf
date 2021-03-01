@@ -1,4 +1,4 @@
-package io.github.ryuryu_ymj.golf
+package io.github.ryuryu_ymj.golf.play
 
 interface MyTouchable {
     fun touchDown(x: Float, y: Float): Boolean

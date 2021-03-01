@@ -1,4 +1,4 @@
-package io.github.ryuryu_ymj.golf
+package io.github.ryuryu_ymj.golf.play
 
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.Texture
