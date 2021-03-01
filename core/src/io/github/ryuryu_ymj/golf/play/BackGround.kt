@@ -6,17 +6,17 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.scenes.scene2d.Actor
-import io.github.ryuryu_ymj.golf.edit.CELL_SIZE
+import io.github.ryuryu_ymj.golf.edit.COMPONENT_UNIT_SIZE
 
 class BackGround(width: Float, height: Float) : Actor() {
     private val texture: Texture
 
     init {
         val cellSizePx = 20
-        val col = (width / CELL_SIZE).toInt() + 2
-        val row = (height / CELL_SIZE).toInt() + 2
-        setSize(col * CELL_SIZE, row * CELL_SIZE)
-        setOrigin(col / 2 * CELL_SIZE, row / 2 * CELL_SIZE)
+        val col = (width / COMPONENT_UNIT_SIZE).toInt() + 2
+        val row = (height / COMPONENT_UNIT_SIZE).toInt() + 2
+        setSize(col * COMPONENT_UNIT_SIZE, row * COMPONENT_UNIT_SIZE)
+        setOrigin(col / 2 * COMPONENT_UNIT_SIZE, row / 2 * COMPONENT_UNIT_SIZE)
         setPosition(-originX, -originY)
         val pixmap = Pixmap(
             col * cellSizePx, row * cellSizePx,
@@ -37,11 +37,11 @@ class BackGround(width: Float, height: Float) : Actor() {
 
     override fun act(delta: Float) {
         super.act(delta)
-        val ix = MathUtils.floor(stage.camera.position.x / CELL_SIZE)
-        val iy = MathUtils.floor(stage.camera.position.y / CELL_SIZE)
+        val ix = MathUtils.floor(stage.camera.position.x / COMPONENT_UNIT_SIZE)
+        val iy = MathUtils.floor(stage.camera.position.y / COMPONENT_UNIT_SIZE)
         setPosition(
-            ix * CELL_SIZE - originX,
-            iy * CELL_SIZE - originY
+            ix * COMPONENT_UNIT_SIZE - originX,
+            iy * COMPONENT_UNIT_SIZE - originY
         )
     }
 

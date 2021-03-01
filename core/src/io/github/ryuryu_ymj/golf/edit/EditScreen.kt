@@ -13,14 +13,15 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.utils.viewport.FitViewport
 import io.github.ryuryu_ymj.golf.MyGame
 import io.github.ryuryu_ymj.golf.play.*
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import ktx.app.KtxScreen
 import ktx.graphics.use
 import ktx.math.vec2
 import ktx.scene2d.actors
-import ktx.scene2d.label
 import ktx.scene2d.table
 import ktx.scene2d.textField
-import java.io.PrintWriter
 import kotlin.math.max
 import kotlin.math.min
 
@@ -71,7 +72,20 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     }
 
     override fun show() {
+        stage.addActor(bg)
         camera.position.setZero()
+
+        try {
+            val file = Gdx.files.internal("course/${"%02d".format(courseIndex)}raw")
+            val dataList =
+                Json.decodeFromString<Array<CourseComponentData>>(file.readString())
+            dataList.forEach {
+                val component = it.createCourseComponent(game.asset)
+                courseComponents.add(component)
+                stage.addActor(component)
+            }
+        } catch (e: Exception) {
+        }
 
         Gdx.input.inputProcessor = input
     }
@@ -109,12 +123,10 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             Gdx.input.isKeyJustPressed(Input.Keys.S)
         ) {
             // save
-            /*val cellTypeList = cellList.map { it.type }
+            val dataList = courseComponents.map { it.createCourseComponentData() }
             val file = Gdx.files.local("course/${"%02d".format(courseIndex)}raw")
-            file.writeString(Json.encodeToString(cellTypeList), false)
+            file.writeString(Json.encodeToString(dataList), false)
             println("save edit file to course/${"%02d".format(courseIndex)}raw")
-
-            saveBody(cellTypeList)*/
         } else if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
             Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) &&
             Gdx.input.isKeyJustPressed(Input.Keys.A)
@@ -160,10 +172,10 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     override fun touchUp(x: Float, y: Float): Boolean {
         if (isSelecting) {
             isSelecting = false
-            val beginIX = MathUtils.floor(selectBegin.x / CELL_SIZE)
-            val beginIY = MathUtils.floor(selectBegin.y / CELL_SIZE)
-            val endIX = MathUtils.floor(selectEnd.x / CELL_SIZE)
-            val endIY = MathUtils.floor(selectEnd.y / CELL_SIZE)
+            val beginIX = MathUtils.floor(selectBegin.x / COMPONENT_UNIT_SIZE)
+            val beginIY = MathUtils.floor(selectBegin.y / COMPONENT_UNIT_SIZE)
+            val endIX = MathUtils.floor(selectEnd.x / COMPONENT_UNIT_SIZE)
+            val endIY = MathUtils.floor(selectEnd.y / COMPONENT_UNIT_SIZE)
             val rangeX = min(beginIX, endIX)..max(beginIX, endIX)
             val rangeY = min(beginIY, endIY)..max(beginIY, endIY)
             for (ix in rangeX) {
@@ -180,8 +192,8 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                             }
                         }
                         BrushType.FAIRWAY -> {
-                            if (old == null || old !is Ground) {
-                                val new = Ground(game.asset, ix, iy)
+                            if (old == null || old !is Fairway) {
+                                val new = Fairway(game.asset, ix, iy)
                                 stage.addActor(new)
                                 courseComponents.add(new)
                             }
@@ -200,56 +212,5 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         stage.dispose()
         uiStage.dispose()
         batch.dispose()
-    }
-
-    private fun saveBody(cellTypeList: MutableList2d<CellType>) {
-        val file = Gdx.files.local("course/${"%02d".format(courseIndex)}body")
-        val writer = PrintWriter(file.writer(false))
-
-        while (true) {
-            var boxX: Int? = null
-            var boxY: Int? = null
-            var boxW = 0
-            var boxH = 0
-            xLoop@
-            for (x in cellTypeList.rangeX) {
-                for (y in cellTypeList.rangeY) {
-                    if (boxX == null || boxY == null) {
-                        if (cellTypeList[x, y] == CellType.FAIRWAY) {
-                            boxX = x
-                            boxY = y
-                        }
-                    } else if (boxH == 0) {
-                        if (cellTypeList[x, y] != CellType.FAIRWAY) {
-                            boxH = y - boxY
-                        } else if (y == cellTypeList.lastY) {
-                            boxH = y + 1 - boxY
-                        }
-                    } else if (y < boxY) {
-                        continue
-                    } else if (y >= boxY + boxH) {
-                        break
-                    } else if (cellTypeList[x, y] != CellType.FAIRWAY) {
-                        boxW = x - boxX
-                        break@xLoop
-                    } else if (x == cellTypeList.lastY) {
-                        boxW = x + 1 - boxX
-                    }
-                }
-            }
-            if (boxX == null || boxY == null) break
-            for (x in boxX until boxX + boxW) {
-                for (y in boxY until boxY + boxH) {
-                    cellTypeList[x, y] = CellType.NULL
-                }
-            }
-            val x = (boxX - startX) * CELL_SIZE - CELL_SIZE / 2
-            val y = (boxY - startY) * CELL_SIZE
-            val width = boxW * CELL_SIZE
-            val height = boxH * CELL_SIZE
-            writer.println("fairway,box,${x}f,${y}f,${width}f,${height}f")
-        }
-        writer.close()
-        println("save body file to course/${"%02d".format(courseIndex)}body")
     }
 }
