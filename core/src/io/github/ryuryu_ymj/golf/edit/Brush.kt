@@ -6,34 +6,36 @@ import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.ui.Label
+import ktx.scene2d.Scene2DSkin
+import ktx.scene2d.defaultStyle
 
-class Brush(private val asset: AssetManager) : Actor() {
-    var type: CellType? = null; private set
-
-    init {
-        setPosition(0f, 0f)
-        setSize(50f, 50f)
-    }
+class Brush : Label("MOVE", Scene2DSkin.defaultSkin, defaultStyle) {
+    var type: BrushType = BrushType.MOVE; private set
 
     override fun act(delta: Float) {
         super.act(delta)
         when {
-            Gdx.input.isKeyPressed(Input.Keys.M) ->
-                type = null
-            Gdx.input.isKeyPressed(Input.Keys.N) ->
-                type = CellType.NULL
-            Gdx.input.isKeyPressed(Input.Keys.S) &&
-                    !Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) ->
-                type = CellType.START
-            Gdx.input.isKeyPressed(Input.Keys.F) ->
-                type = CellType.FAIRWAY
+            Gdx.input.isKeyJustPressed(Input.Keys.M) -> {
+                type = BrushType.MOVE
+                setText(type.name)
+            }
+            Gdx.input.isKeyJustPressed(Input.Keys.D) -> {
+                type = BrushType.DELETE
+                setText(type.name)
+            }
+            Gdx.input.isKeyJustPressed(Input.Keys.T) -> {
+                type = BrushType.TEE
+                setText(type.name)
+            }
+            Gdx.input.isKeyJustPressed(Input.Keys.F) -> {
+                type = BrushType.FAIRWAY
+                setText(type.name)
+            }
         }
     }
+}
 
-    override fun draw(batch: Batch, parentAlpha: Float) {
-        type?.let {
-            val texture = asset.get<Texture>(it.path)
-            batch.draw(texture, x, y, width, height)
-        }
-    }
+enum class BrushType {
+    MOVE, DELETE, TEE, FAIRWAY
 }

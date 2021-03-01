@@ -13,13 +13,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.utils.viewport.FitViewport
 import io.github.ryuryu_ymj.golf.MyGame
 import io.github.ryuryu_ymj.golf.play.*
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import ktx.app.KtxScreen
 import ktx.graphics.use
 import ktx.math.vec2
 import ktx.scene2d.actors
+import ktx.scene2d.label
 import ktx.scene2d.table
 import ktx.scene2d.textField
 import java.io.PrintWriter
@@ -43,7 +41,8 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     }
     private val shape = ShapeRenderer()
 
-    private lateinit var cellList: MutableList2d<Cell>
+    private val bg = BackGround(stage.width, stage.height)
+    private val courseComponents = mutableListOf<CourseComponent>()
 
     private var startX = 0
     private var startY = 0
@@ -51,17 +50,22 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     private val selectBegin = vec2()
     private val selectEnd = vec2()
 
-    private val brush = Brush(game.asset)
+    private val brush = Brush()
     private val courseIndexField: TextField
 
     init {
-        uiStage.addActor(brush)
+        stage.addActor(bg)
+
+        //uiStage.addActor(brush)
         uiStage.actors {
             table {
                 setFillParent(true)
                 //debug = true
-                right().top()
-                courseIndexField = textField(text = courseIndex.toString())
+                top()
+                add(brush).expandX().left()
+                courseIndexField = textField(text = courseIndex.toString()) {
+                    it.expandX().right()
+                }
             }
         }
     }
@@ -69,40 +73,11 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     override fun show() {
         camera.position.setZero()
 
-        fun defaultCellList() = MutableList2d(-10..10, -10..10) { x, y ->
-            Cell(game.asset, x, y).also {
-                stage.addActor(it)
-                if (x == startX && y == startY) {
-                    it.type = CellType.START
-                }
-            }
-        }
-
-        val file = Gdx.files.internal("course/${"%02d".format(courseIndex)}raw")
-        cellList = if (file.exists()) {
-            try {
-                val read = Json.decodeFromString<MutableList2d<CellType>>(file.readString())
-                MutableList2d(read.rangeX, read.rangeY) { x, y ->
-                    Cell(game.asset, x, y).also {
-                        stage.addActor(it)
-                        it.type = read[x, y]
-                        if (it.type == CellType.START) {
-                            startX = x
-                            startY = y
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                defaultCellList()
-            }
-        } else {
-            defaultCellList()
-        }
-
         Gdx.input.inputProcessor = input
     }
 
     override fun hide() {
+        courseComponents.clear()
         stage.clear()
         Gdx.input.inputProcessor = null
     }
@@ -134,22 +109,19 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             Gdx.input.isKeyJustPressed(Input.Keys.S)
         ) {
             // save
-            val cellTypeList = cellList.map { it.type }
+            /*val cellTypeList = cellList.map { it.type }
             val file = Gdx.files.local("course/${"%02d".format(courseIndex)}raw")
             file.writeString(Json.encodeToString(cellTypeList), false)
             println("save edit file to course/${"%02d".format(courseIndex)}raw")
 
-            saveBody(cellTypeList)
+            saveBody(cellTypeList)*/
         } else if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
             Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) &&
             Gdx.input.isKeyJustPressed(Input.Keys.A)
         ) {
             // clear with CellType.NULL
-            cellList.forEach {
-                if (it.type != CellType.START) {
-                    it.type = CellType.NULL
-                }
-            }
+            courseComponents.forEach { it.remove() }
+            courseComponents.clear()
         } else if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
             Gdx.input.isKeyJustPressed(Input.Keys.P)
         ) {
@@ -170,52 +142,11 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     }
 
     override fun touchDown(x: Float, y: Float): Boolean {
-        val brushType = brush.type ?: return false
-        val cell = cellList.getOrNull(
-            MathUtils.floor(x / CELL_SIZE),
-            MathUtils.floor(y / CELL_SIZE)
-        ) ?: return false
-        if (cell.type != brushType && cell.type != CellType.START) {
-            cell.type = brushType
-            if (brushType == CellType.START) {
-                cellList[startX, startY].type = CellType.NULL
-                startX = cell.ix
-                startY = cell.iy
-            }
-
-            val margin = 3
-            if (cellList.lastX - cell.ix < margin) {
-                cellList.add(right = margin * 2) { ix, iy ->
-                    Cell(game.asset, ix, iy).also {
-                        stage.addActor(it)
-                    }
-                }
-            } else if (cell.ix - cellList.firstX < margin) {
-                cellList.add(left = margin * 2) { ix, iy ->
-                    Cell(game.asset, ix, iy).also {
-                        stage.addActor(it)
-                    }
-                }
-            }
-            if (cellList.lastY - cell.iy < margin) {
-                cellList.add(top = margin * 2) { ix, iy ->
-                    Cell(game.asset, ix, iy).also {
-                        stage.addActor(it)
-                    }
-                }
-            } else if (cell.iy - cellList.firstY < margin) {
-                cellList.add(bottom = margin * 2) { ix, iy ->
-                    Cell(game.asset, ix, iy).also {
-                        stage.addActor(it)
-                    }
-                }
-            }
-            isSelecting = true
-            selectBegin.set(x, y)
-            selectEnd.set(x, y)
-            return true
-        }
-        return false
+        if (brush.type == BrushType.MOVE) return false
+        selectBegin.set(x, y)
+        selectEnd.set(x, y)
+        isSelecting = true
+        return true
     }
 
     override fun touchDragged(x: Float, y: Float): Boolean {
@@ -227,7 +158,6 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     }
 
     override fun touchUp(x: Float, y: Float): Boolean {
-        val brushType = brush.type ?: return false
         if (isSelecting) {
             isSelecting = false
             val beginIX = MathUtils.floor(selectBegin.x / CELL_SIZE)
@@ -238,7 +168,25 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             val rangeY = min(beginIY, endIY)..max(beginIY, endIY)
             for (ix in rangeX) {
                 for (iy in rangeY) {
-                    cellList[ix, iy].type = brushType
+                    val old = courseComponents.find {
+                        ix >= it.ix && ix < it.ix + it.iw &&
+                                iy >= it.iy && iy < it.iy + it.ih
+                    }
+                    when (brush.type) {
+                        BrushType.DELETE -> {
+                            if (old != null) {
+                                old.remove()
+                                courseComponents.remove(old)
+                            }
+                        }
+                        BrushType.FAIRWAY -> {
+                            if (old == null || old !is Ground) {
+                                val new = Ground(game.asset, ix, iy)
+                                stage.addActor(new)
+                                courseComponents.add(new)
+                            }
+                        }
+                    }
                 }
             }
             return true
@@ -247,7 +195,10 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     }
 
     override fun dispose() {
+        bg.dispose()
+        shape.dispose()
         stage.dispose()
+        uiStage.dispose()
         batch.dispose()
     }
 

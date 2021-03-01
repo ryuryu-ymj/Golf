@@ -17,6 +17,7 @@ class MyGame : KtxGame<KtxScreen>() {
         asset.load<Texture>("image/ball.png")
         asset.load<Texture>("image/cell.png")
         asset.load<Texture>("image/fairway.png")
+        asset.load<Texture>("image/fairway-slope-up-21.png")
 
         asset.load<Skin>("skin/test-skin.json")
 
