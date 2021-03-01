@@ -73,7 +73,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         world.step(1f / 60, 6, 2)
         stage.act()
         if (ball.body.isAwake) {
-            camera.position.set(ball.x, ball.y, 0f)
+            camera.position.set(ball.centerX, ball.centerY, 0f)
             if (input.isDragging) input.cancelDragging()
         }
         if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
