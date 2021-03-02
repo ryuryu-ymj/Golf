@@ -8,45 +8,42 @@ import kotlinx.serialization.Serializable
 
 const val COMPONENT_UNIT_SIZE = 0.2f
 
-abstract class CourseComponent(
+class CourseComponent(
+    asset: AssetManager,
+    val type: CourseComponentType,
     val ix: Int, val iy: Int,
-    val iw: Int, val ih: Int,
-    private val texture: Texture
 ) : Actor() {
+    val ih: Int = type.ih
+    val iw: Int = type.iw
+    private val texture: Texture = asset.get(type.texturePath)
+
     init {
         setPosition(ix * COMPONENT_UNIT_SIZE, iy * COMPONENT_UNIT_SIZE)
         setSize(iw * COMPONENT_UNIT_SIZE, ih * COMPONENT_UNIT_SIZE)
     }
 
-    final override fun setPosition(x: Float, y: Float) {
-        super.setPosition(x, y)
-    }
-
-    final override fun setSize(width: Float, height: Float) {
-        super.setSize(width, height)
-    }
-
-    final override fun draw(batch: Batch, parentAlpha: Float) {
+    override fun draw(batch: Batch, parentAlpha: Float) {
         batch.draw(texture, x, y, width, height)
     }
 
-    abstract fun createCourseComponentData() : CourseComponentData;
+    fun createCourseComponentData() =
+        CourseComponentData(ix, iy, type)
 }
 
 @Serializable
-class CourseComponentData(
+data class CourseComponentData(
     val ix: Int, val iy: Int,
-    val iw: Int, val ih: Int,
     val type: CourseComponentType
 ) {
-    fun createCourseComponent(asset: AssetManager): CourseComponent {
-        return when (type) {
-            CourseComponentType.FAIRWAY ->
-                Fairway(asset, ix, iy)
-        }
-    }
+    fun createCourseComponent(asset: AssetManager) =
+        CourseComponent(asset, type, ix, iy)
 }
 
-enum class CourseComponentType {
-    FAIRWAY
+enum class CourseComponentType(
+    val iw: Int, val ih: Int,
+    val texturePath: String
+) {
+    FAIRWAY(1, 1, "image/fairway.png"),
+    FAIRWAY_SLOPE_UP_21(2, 1, "image/fairway-slope-up-21.png"),
+    FAIRWAY_SLOPE_DOWN_21(2, 1, "image/fairway-slope-up-21.png"),
 }

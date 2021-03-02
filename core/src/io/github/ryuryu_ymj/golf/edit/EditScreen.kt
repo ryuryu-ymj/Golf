@@ -178,24 +178,42 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             val endIY = MathUtils.floor(selectEnd.y / COMPONENT_UNIT_SIZE)
             val rangeX = min(beginIX, endIX)..max(beginIX, endIX)
             val rangeY = min(beginIY, endIY)..max(beginIY, endIY)
-            for (ix in rangeX) {
-                for (iy in rangeY) {
-                    val old = courseComponents.find {
-                        ix >= it.ix && ix < it.ix + it.iw &&
-                                iy >= it.iy && iy < it.iy + it.ih
-                    }
-                    when (brush.type) {
-                        BrushType.DELETE -> {
-                            if (old != null) {
-                                old.remove()
-                                courseComponents.remove(old)
+
+            when (brush.type) {
+                BrushType.DELETE, BrushType.FAIRWAY -> {
+                    for (ix in rangeX) {
+                        for (iy in rangeY) {
+                            when (brush.type) {
+                                BrushType.DELETE -> {
+                                    removeCourseComponent(ix, iy)
+                                }
+                                BrushType.FAIRWAY -> {
+                                    addCourseComponent(
+                                        CourseComponentType.FAIRWAY,
+                                        ix, iy
+                                    )
+                                }
                             }
                         }
-                        BrushType.FAIRWAY -> {
-                            if (old == null || old !is Fairway) {
-                                val new = Fairway(game.asset, ix, iy)
-                                stage.addActor(new)
-                                courseComponents.add(new)
+                    }
+                }
+                BrushType.FAIRWAY_SLOPE -> {
+                    when ((rangeX.last - rangeX.first + 1) /
+                            (rangeY.last - rangeY.first + 1)) {
+                        2 -> {
+                            for (ix in 0..(rangeX.last - rangeX.first)) {
+                                if (ix % 2 == 0) {
+                                    addCourseComponent(
+                                        CourseComponentType.FAIRWAY_SLOPE_UP_21,
+                                        rangeX.first + ix, rangeY.first + ix / 2
+                                    )
+                                }
+                                for (iy in 0 until ix / 2) {
+                                    addCourseComponent(
+                                        CourseComponentType.FAIRWAY,
+                                        rangeX.first + ix, rangeY.first + iy
+                                    )
+                                }
                             }
                         }
                     }
@@ -204,6 +222,30 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             return true
         }
         return false
+    }
+
+    private fun addCourseComponent(
+        type: CourseComponentType, ix: Int, iy: Int
+    ) : Boolean {
+        val old = courseComponents.find {
+            ix >= it.ix && ix < it.ix + it.iw &&
+                    iy >= it.iy && iy < it.iy + it.ih
+        }
+        if (old != null) return false
+        val new = CourseComponent(game.asset, type, ix, iy)
+        stage.addActor(new)
+        courseComponents.add(new)
+        return true
+    }
+
+    private fun removeCourseComponent(ix: Int, iy: Int) : Boolean {
+        val old = courseComponents.find {
+            ix >= it.ix && ix < it.ix + it.iw &&
+                    iy >= it.iy && iy < it.iy + it.ih
+        } ?: return false
+        old.remove()
+        courseComponents.remove(old)
+        return true
     }
 
     override fun dispose() {
