@@ -44,6 +44,8 @@ enum class CourseComponentType(
     val texturePath: String
 ) {
     FAIRWAY(1, 1, "image/fairway.png"),
+    FAIRWAY_SLOPE_UP_11(1, 1, "image/fairway-slope-up-21.png"),
+    FAIRWAY_SLOPE_DOWN_11(1, 1, "image/fairway-slope-down-21.png"),
     FAIRWAY_SLOPE_UP_21(2, 1, "image/fairway-slope-up-21.png"),
-    FAIRWAY_SLOPE_DOWN_21(2, 1, "image/fairway-slope-up-21.png"),
+    FAIRWAY_SLOPE_DOWN_21(2, 1, "image/fairway-slope-down-21.png"),
 }

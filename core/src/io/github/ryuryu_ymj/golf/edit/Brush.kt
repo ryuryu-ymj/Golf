@@ -2,10 +2,6 @@ package io.github.ryuryu_ymj.golf.edit
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
-import com.badlogic.gdx.assets.AssetManager
-import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.graphics.g2d.Batch
-import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import ktx.scene2d.Scene2DSkin
 import ktx.scene2d.defaultStyle
@@ -30,8 +26,9 @@ class Brush : Label("MOVE", Scene2DSkin.defaultSkin, defaultStyle) {
             }
             Gdx.input.isKeyJustPressed(Input.Keys.F) -> {
                 type = when (type) {
-                    BrushType.FAIRWAY -> BrushType.FAIRWAY_SLOPE
-                    BrushType.FAIRWAY_SLOPE -> BrushType.FAIRWAY
+                    BrushType.FAIRWAY -> BrushType.FAIRWAY_SLOPE_UP
+                    BrushType.FAIRWAY_SLOPE_UP -> BrushType.FAIRWAY_SLOPE_DOWN
+                    BrushType.FAIRWAY_SLOPE_DOWN -> BrushType.FAIRWAY
                     else -> BrushType.FAIRWAY
                 }
                 setText(type.name)
@@ -41,5 +38,5 @@ class Brush : Label("MOVE", Scene2DSkin.defaultSkin, defaultStyle) {
 }
 
 enum class BrushType {
-    MOVE, DELETE, TEE, FAIRWAY, FAIRWAY_SLOPE
+    MOVE, DELETE, TEE, FAIRWAY, FAIRWAY_SLOPE_UP, FAIRWAY_SLOPE_DOWN
 }

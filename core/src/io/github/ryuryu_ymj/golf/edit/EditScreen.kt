@@ -197,9 +197,23 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                         }
                     }
                 }
-                BrushType.FAIRWAY_SLOPE -> {
+                BrushType.FAIRWAY_SLOPE_UP -> {
                     when ((rangeX.last - rangeX.first + 1) /
                             (rangeY.last - rangeY.first + 1)) {
+                        1 -> {
+                            for (ix in 0..(rangeX.last - rangeX.first)) {
+                                addCourseComponent(
+                                    CourseComponentType.FAIRWAY_SLOPE_UP_11,
+                                    rangeX.first + ix, rangeY.first + ix
+                                )
+                                for (iy in 0 until ix) {
+                                    addCourseComponent(
+                                        CourseComponentType.FAIRWAY,
+                                        rangeX.first + ix, rangeY.first + iy
+                                    )
+                                }
+                            }
+                        }
                         2 -> {
                             for (ix in 0..(rangeX.last - rangeX.first)) {
                                 if (ix % 2 == 0) {
@@ -218,6 +232,41 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                         }
                     }
                 }
+                BrushType.FAIRWAY_SLOPE_DOWN -> {
+                    when ((rangeX.last - rangeX.first + 1) /
+                            (rangeY.last - rangeY.first + 1)) {
+                        1 -> {
+                            for (ix in 0..(rangeX.last - rangeX.first)) {
+                                addCourseComponent(
+                                    CourseComponentType.FAIRWAY_SLOPE_DOWN_11,
+                                    rangeX.last - ix, rangeY.first + ix
+                                )
+                                for (iy in 0 until ix) {
+                                    addCourseComponent(
+                                        CourseComponentType.FAIRWAY,
+                                        rangeX.last - ix, rangeY.first + iy
+                                    )
+                                }
+                            }
+                        }
+                        2 -> {
+                            for (ix in 0..(rangeX.last - rangeX.first)) {
+                                if (ix % 2 == 0) {
+                                    addCourseComponent(
+                                        CourseComponentType.FAIRWAY_SLOPE_DOWN_21,
+                                        rangeX.last - ix - 1, rangeY.first + ix / 2
+                                    )
+                                }
+                                for (iy in 0 until ix / 2) {
+                                    addCourseComponent(
+                                        CourseComponentType.FAIRWAY,
+                                        rangeX.last - ix, rangeY.first + iy
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
             return true
         }
@@ -226,7 +275,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
 
     private fun addCourseComponent(
         type: CourseComponentType, ix: Int, iy: Int
-    ) : Boolean {
+    ): Boolean {
         val old = courseComponents.find {
             ix >= it.ix && ix < it.ix + it.iw &&
                     iy >= it.iy && iy < it.iy + it.ih
@@ -238,7 +287,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         return true
     }
 
-    private fun removeCourseComponent(ix: Int, iy: Int) : Boolean {
+    private fun removeCourseComponent(ix: Int, iy: Int): Boolean {
         val old = courseComponents.find {
             ix >= it.ix && ix < it.ix + it.iw &&
                     iy >= it.iy && iy < it.iy + it.ih
