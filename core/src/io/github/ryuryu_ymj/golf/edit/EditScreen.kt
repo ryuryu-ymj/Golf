@@ -117,6 +117,20 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             Gdx.gl.glDisable(GL20.GL_BLEND)
         }
 
+        if (brush.type != BrushType.MOVE) {
+            val margin = viewport.screenWidth / 8
+            val speed = 0.01f
+            if (Gdx.input.x < margin) {
+                camera.position.x -= speed
+            } else if (Gdx.input.x > viewport.screenWidth - margin) {
+                camera.position.x += speed
+            }
+            if (Gdx.input.y < margin) {
+                camera.position.y += speed
+            } else if (Gdx.input.y > viewport.screenHeight - margin) {
+                camera.position.y -= speed
+            }
+        }
         stage.act()
         uiStage.act()
         if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
