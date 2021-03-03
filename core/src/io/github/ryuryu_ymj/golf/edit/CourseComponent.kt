@@ -5,6 +5,8 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.Actor
 import kotlinx.serialization.Serializable
+import ktx.collections.GdxArray
+import ktx.collections.gdxArrayOf
 
 const val COMPONENT_UNIT_SIZE = 0.2f
 
@@ -15,6 +17,10 @@ class CourseComponent(
 ) : Actor() {
     val ih: Int = type.ih
     val iw: Int = type.iw
+    var rightContacted = false; private set
+    var leftContacted = false; private set
+    var topContacted = false; private set
+    var bottomContacted = false; private set
     private val texture: Texture = asset.get(type.texturePath)
 
     init {
@@ -26,8 +32,45 @@ class CourseComponent(
         batch.draw(texture, x, y, width, height)
     }
 
+    fun setContact(components: List<CourseComponent>) {
+        rightContacted = components.findAt(ix + iw, iy) != null
+        leftContacted = components.findAt(ix - iw, iy) != null
+        topContacted = components.findAt(ix, iy + ih) != null
+        bottomContacted = components.findAt(ix, iy - ih) != null
+    }
+
     fun createCourseComponentData() =
         CourseComponentData(ix, iy, type)
+
+    fun createOutline(): GdxArray<Edge> {
+        val edges = gdxArrayOf<Edge>()
+        val v = listOf(
+            intVec2(ix, iy), intVec2(ix + iw, iy),
+            intVec2(ix + iw, iy + ih), intVec2(ix, iy + ih)
+        )
+        val contact = listOf(
+            bottomContacted, rightContacted,
+            topContacted, leftContacted
+        )
+
+        for (i in 0..3) {
+            if (type.Vector2 and (1 shl i) != 0 &&
+                type.Vector2 and (1 shl ((i + 1) % 4)) != 0 &&
+                !contact[i]
+            ) {
+                edges.add(Edge(v[i], v[(i + 1) % 4]))
+            }
+            if (type.Vector2 and (1 shl i) == 0) {
+                edges.add(Edge(v[(i + 3) % 4], v[(i + 1) % 4]))
+            }
+        }
+        return edges
+    }
+}
+
+fun List<CourseComponent>.findAt(ix: Int, iy: Int) = find {
+    ix >= it.ix && ix < it.ix + it.iw &&
+            iy >= it.iy && iy < it.iy + it.ih
 }
 
 @Serializable
@@ -40,12 +83,13 @@ data class CourseComponentData(
 }
 
 enum class CourseComponentType(
-    val iw: Int, val ih: Int,
-    val texturePath: String
+    val texturePath: String,
+    val Vector2: Int = 0b1111,
+    val iw: Int = 1, val ih: Int = 1,
 ) {
-    FAIRWAY(1, 1, "image/fairway.png"),
-    FAIRWAY_SLOPE_UP_11(1, 1, "image/fairway-slope-up-21.png"),
-    FAIRWAY_SLOPE_DOWN_11(1, 1, "image/fairway-slope-down-21.png"),
-    FAIRWAY_SLOPE_UP_21(2, 1, "image/fairway-slope-up-21.png"),
-    FAIRWAY_SLOPE_DOWN_21(2, 1, "image/fairway-slope-down-21.png"),
+    FAIRWAY("image/fairway.png"),
+    FAIRWAY_SLOPE_UP_11("image/fairway-slope-up-21.png", 0b0111),
+    FAIRWAY_SLOPE_DOWN_11("image/fairway-slope-down-21.png", 0b1011),
+    FAIRWAY_SLOPE_UP_21("image/fairway-slope-up-21.png", 0b0111, 2, 1),
+    FAIRWAY_SLOPE_DOWN_21("image/fairway-slope-down-21.png", 0b1011, 2, 1),
 }

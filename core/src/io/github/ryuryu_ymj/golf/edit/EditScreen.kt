@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.utils.viewport.FitViewport
@@ -17,11 +18,17 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ktx.app.KtxScreen
+import ktx.collections.GdxArray
+import ktx.collections.gdxArrayOf
+import ktx.collections.isNotEmpty
+import ktx.collections.lastIndex
 import ktx.graphics.use
+import ktx.math.minus
 import ktx.math.vec2
 import ktx.scene2d.actors
 import ktx.scene2d.table
 import ktx.scene2d.textField
+import java.io.PrintWriter
 import kotlin.math.max
 import kotlin.math.min
 
@@ -141,6 +148,9 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             val file = Gdx.files.local("course/${"%02d".format(courseIndex)}raw")
             file.writeString(Json.encodeToString(dataList), false)
             println("save edit file to course/${"%02d".format(courseIndex)}raw")
+
+            courseComponents.forEach { it.setContact(courseComponents) }
+            saveBodyFile()
         } else if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
             Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) &&
             Gdx.input.isKeyJustPressed(Input.Keys.A)
@@ -290,10 +300,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     private fun addCourseComponent(
         type: CourseComponentType, ix: Int, iy: Int
     ): Boolean {
-        val old = courseComponents.find {
-            ix >= it.ix && ix < it.ix + it.iw &&
-                    iy >= it.iy && iy < it.iy + it.ih
-        }
+        val old = courseComponents.findAt(ix, iy)
         if (old != null) return false
         val new = CourseComponent(game.asset, type, ix, iy)
         stage.addActor(new)
@@ -302,10 +309,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     }
 
     private fun removeCourseComponent(ix: Int, iy: Int): Boolean {
-        val old = courseComponents.find {
-            ix >= it.ix && ix < it.ix + it.iw &&
-                    iy >= it.iy && iy < it.iy + it.ih
-        } ?: return false
+        val old = courseComponents.findAt(ix, iy) ?: return false
         old.remove()
         courseComponents.remove(old)
         return true
@@ -317,5 +321,94 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         stage.dispose()
         uiStage.dispose()
         batch.dispose()
+    }
+
+    private fun saveBodyFile() {
+        val file = Gdx.files.local("course/${"%02d".format(courseIndex)}body")
+        val writer = PrintWriter(file.writer(false))
+
+        val edges = gdxArrayOf<Edge>()
+        courseComponents.forEach { edges.addAll(it.createOutline()) }
+        val graphList = gdxArrayOf<GdxArray<Vector2>>()
+
+        while (edges.isNotEmpty()) {
+            val graph = gdxArrayOf<Vector2>()
+            graph.add(edges[0].begin)
+            while (true) {
+                val edge = edges.find { it.begin == graph.last() } ?: break
+                graph.add(edge.end)
+                edges.removeValue(edge, true)
+                if (graph.first() == graph.last()) {
+                    break
+                }
+            }
+            graphList.add(graph)
+        }
+
+        val cuts = listOf(vec2(1f, 0f), vec2(0f, 1f), vec2(-1f, 0f), vec2(0f, -1f))
+        loop@
+        while (true) {
+            for (graph in graphList) {
+                for (i in 0 until graph.lastIndex) {
+                    val prev = graph[i] -
+                            if (i == 0) graph[graph.lastIndex - 1]
+                            else graph[i - 1]
+                    val next = graph[i + 1] - graph[i]
+                    if (prev.crs(next) < 0) { // concave
+                        println(graph[i])
+                        for (cut in cuts) {
+                            if (prev.crs(cut) > 0 || next.crs(cut) > 0) {
+                                for (j in 0 until graph.lastIndex) {
+                                    if (i != j &&
+                                        (graph[j] - graph[i]).crs(cut) == 0f &&
+                                        (graph[j] - graph[i]).dot(cut) > 0
+                                    ) {
+                                        val s = min(i, j)
+                                        val e = max(i, j)
+                                        val graph2 = gdxArrayOf<Vector2>()
+                                        graph2.addAll(graph, s, e - s + 1)
+                                        graph2.add(graph[s])
+                                        graphList.add(graph2)
+                                        graph.removeRange(s + 1, e - 1)
+                                        continue@loop
+                                    }
+                                }
+                            }
+                        }
+                    } else if (i == graph.lastIndex - 1) {
+                        break@loop
+                    }
+                }
+            }
+        }
+        for (graph in graphList) {
+            val poly = gdxArrayOf<Vector2>()
+            var rightCnt = 0
+            for (i in 0 until graph.lastIndex) {
+                val prev = graph[i] -
+                        if (i == 0) graph[graph.lastIndex - 1]
+                        else graph[i - 1]
+                val next = graph[i + 1] - graph[i]
+                if (prev.crs(next) != 0f) {
+                    poly.add(graph[i])
+                    if (prev.dot(next) == 0f) {
+                        rightCnt++
+                    }
+                }
+            }
+            if (rightCnt == 4) {
+                val ix = poly.map { it.x }.minOrNull()!!
+                val iy = poly.map { it.y }.minOrNull()!!
+                val iw = poly.map { it.x }.maxOrNull()!! - ix
+                val ih = poly.map { it.y }.maxOrNull()!! - iy
+                println("fairway,box,$ix,$iy,$iw,$ih")
+            } else {
+                println("fairway,polygon,${poly}")
+            }
+        }
+
+
+        writer.close()
+        println("save body file to course/${"%02d".format(courseIndex)}body")
     }
 }

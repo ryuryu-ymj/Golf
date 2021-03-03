@@ -52,7 +52,7 @@ class CourseManager {
                             }
                         }
                         "polygon" -> {
-                            val vertices = FloatArray(8) { cells[it + 1].toFloat() }
+                            val vertices = FloatArray(8) { cells[it + 2].toFloat() }
                             world.body {
                                 polygon(vertices) {
                                     restitution = 0f
