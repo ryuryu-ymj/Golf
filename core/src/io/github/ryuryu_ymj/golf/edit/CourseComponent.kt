@@ -87,6 +87,7 @@ enum class CourseComponentType(
     val Vector2: Int = 0b1111,
     val iw: Int = 1, val ih: Int = 1,
 ) {
+    TEE("image/ball.png"),
     FAIRWAY("image/fairway.png"),
     FAIRWAY_SLOPE_UP_11("image/fairway-slope-up-21.png", 0b0111),
     FAIRWAY_SLOPE_DOWN_11("image/fairway-slope-down-21.png", 0b1011),

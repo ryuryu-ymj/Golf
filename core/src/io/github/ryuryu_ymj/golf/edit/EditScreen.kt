@@ -51,9 +51,8 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
 
     private val bg = BackGround(stage.width, stage.height)
     private val courseComponents = mutableListOf<CourseComponent>()
+    private lateinit var tee: CourseComponent
 
-    private var startX = 0
-    private var startY = 0
     private var isSelecting = false
     private val selectBegin = vec2()
     private val selectEnd = vec2()
@@ -90,8 +89,21 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                 val component = it.createCourseComponent(game.asset)
                 courseComponents.add(component)
                 stage.addActor(component)
+                if (component.type == CourseComponentType.TEE) {
+                    tee = component
+                }
             }
         } catch (e: Exception) {
+        }
+        if (!::tee.isInitialized) {
+            courseComponents.findAt(0, 0)?.let {
+                it.remove()
+                courseComponents.remove(it)
+            }
+            courseComponents
+            tee = CourseComponent(game.asset, CourseComponentType.TEE, 0, 0)
+            courseComponents.add(tee)
+            stage.addActor(tee)
         }
 
         Gdx.input.inputProcessor = input
@@ -155,9 +167,14 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) &&
             Gdx.input.isKeyJustPressed(Input.Keys.A)
         ) {
-            // clear with CellType.NULL
-            courseComponents.forEach { it.remove() }
+            // clear course components
+            courseComponents.forEach {
+                if (it !== tee) {
+                    it.remove()
+                }
+            }
             courseComponents.clear()
+            courseComponents.add(tee)
         } else if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) &&
             Gdx.input.isKeyJustPressed(Input.Keys.P)
         ) {
@@ -204,6 +221,16 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             val rangeY = min(beginIY, endIY)..max(beginIY, endIY)
 
             when (brush.type) {
+                BrushType.TEE -> {
+                    courseComponents.remove(tee)
+                    tee.remove()
+                    tee = CourseComponent(
+                        game.asset, CourseComponentType.TEE,
+                        beginIX, beginIY
+                    )
+                    courseComponents.add(tee)
+                    stage.addActor(tee)
+                }
                 BrushType.DELETE, BrushType.FAIRWAY -> {
                     for (ix in rangeX) {
                         for (iy in rangeY) {
@@ -310,6 +337,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
 
     private fun removeCourseComponent(ix: Int, iy: Int): Boolean {
         val old = courseComponents.findAt(ix, iy) ?: return false
+        if (old === tee) return false
         old.remove()
         courseComponents.remove(old)
         return true
