@@ -383,7 +383,6 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                             else graph[i - 1]
                     val next = graph[i + 1] - graph[i]
                     if (prev.crs(next) < 0) { // concave
-                        println(graph[i])
                         for (cut in cuts) {
                             if (prev.crs(cut) > 0 || next.crs(cut) > 0) {
                                 for (j in 0 until graph.lastIndex) {
@@ -429,12 +428,22 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                 val iy = poly.map { it.y }.minOrNull()!!
                 val iw = poly.map { it.x }.maxOrNull()!! - ix
                 val ih = poly.map { it.y }.maxOrNull()!! - iy
-                println("fairway,box,$ix,$iy,$iw,$ih")
-            } else {
-                println("fairway,polygon,${poly}")
+                val x = (ix - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE
+                val y = (iy - tee.iy) * COMPONENT_UNIT_SIZE
+                val w = iw * COMPONENT_UNIT_SIZE
+                val h = ih * COMPONENT_UNIT_SIZE
+                writer.println("fairway,box,$x,$y,$w,$h,")
+            } else if (poly.isNotEmpty()) {
+                writer.print("fairway,polygon,")
+                poly.forEach {
+                    writer.print((it.x - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE)
+                    writer.print(',')
+                    writer.print((it.y - tee.iy) * COMPONENT_UNIT_SIZE)
+                    writer.print(',')
+                }
+                writer.println()
             }
         }
-
 
         writer.close()
         println("save body file to course/${"%02d".format(courseIndex)}body")

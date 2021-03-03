@@ -53,6 +53,10 @@ class CourseComponent(
             topContacted, leftContacted
         )
 
+        if (type == CourseComponentType.TEE) {
+            edges.add(Edge(v[2], v[3]))
+            return edges
+        }
         for (i in 0..3) {
             if (type.Vector2 and (1 shl i) != 0 &&
                 type.Vector2 and (1 shl ((i + 1) % 4)) != 0 &&
