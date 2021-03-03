@@ -374,9 +374,11 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         }
 
         val cuts = listOf(vec2(1f, 0f), vec2(0f, 1f), vec2(-1f, 0f), vec2(0f, -1f))
+        var counter = 0
         loop@
         while (true) {
-            for (graph in graphList) {
+            for (k in counter..graphList.size) {
+                val graph = graphList[k]
                 for (i in 0 until graph.lastIndex) {
                     val prev = graph[i] -
                             if (i == 0) graph[graph.lastIndex - 1]
@@ -403,7 +405,10 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                             }
                         }
                     } else if (i == graph.lastIndex - 1) {
-                        break@loop
+                        counter++
+                        if (counter == graphList.size) {
+                            break@loop
+                        }
                     }
                 }
             }
