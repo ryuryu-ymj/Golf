@@ -377,40 +377,37 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         var counter = 0
         loop@
         while (true) {
-            for (k in counter..graphList.size) {
-                val graph = graphList[k]
-                for (i in 0 until graph.lastIndex) {
-                    val prev = graph[i] -
-                            if (i == 0) graph[graph.lastIndex - 1]
-                            else graph[i - 1]
-                    val next = graph[i + 1] - graph[i]
-                    if (prev.crs(next) < 0) { // concave
-                        for (cut in cuts) {
-                            if (prev.crs(cut) > 0 || next.crs(cut) > 0) {
-                                for (j in 0 until graph.lastIndex) {
-                                    if (i != j &&
-                                        (graph[j] - graph[i]).crs(cut) == 0f &&
-                                        (graph[j] - graph[i]).dot(cut) > 0
-                                    ) {
-                                        val s = min(i, j)
-                                        val e = max(i, j)
-                                        val graph2 = gdxArrayOf<Vector2>()
-                                        graph2.addAll(graph, s, e - s + 1)
-                                        graph2.add(graph[s])
-                                        graphList.add(graph2)
-                                        graph.removeRange(s + 1, e - 1)
-                                        continue@loop
-                                    }
+            val graph = graphList[counter]
+            for (i in 0 until graph.lastIndex) {
+                val prev = graph[i] -
+                        if (i == 0) graph[graph.lastIndex - 1]
+                        else graph[i - 1]
+                val next = graph[i + 1] - graph[i]
+                if (prev.crs(next) < 0) { // concave
+                    for (cut in cuts) {
+                        if (prev.crs(cut) > 0 || next.crs(cut) > 0) {
+                            for (j in 0 until graph.lastIndex) {
+                                if (i != j &&
+                                    (graph[j] - graph[i]).crs(cut) == 0f &&
+                                    (graph[j] - graph[i]).dot(cut) > 0
+                                ) {
+                                    val s = min(i, j)
+                                    val e = max(i, j)
+                                    val graph2 = gdxArrayOf<Vector2>()
+                                    graph2.addAll(graph, s, e - s + 1)
+                                    graph2.add(graph[s])
+                                    graphList.add(graph2)
+                                    graph.removeRange(s + 1, e - 1)
+                                    continue@loop
                                 }
                             }
                         }
-                    } else if (i == graph.lastIndex - 1) {
-                        counter++
-                        if (counter == graphList.size) {
-                            break@loop
-                        }
                     }
                 }
+            }
+            counter++
+            if (counter == graphList.size) {
+                break@loop
             }
         }
         for (graph in graphList) {
