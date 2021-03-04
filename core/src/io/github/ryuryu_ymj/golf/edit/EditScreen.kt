@@ -79,7 +79,6 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
 
     override fun show() {
         stage.addActor(bg)
-        camera.position.setZero()
 
         try {
             val file = Gdx.files.internal("course/${"%02d".format(courseIndex)}raw")
@@ -106,6 +105,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             stage.addActor(tee)
         }
 
+        camera.position.set(tee.centerX, tee.centerY, 0f)
         Gdx.input.inputProcessor = input
     }
 
@@ -431,7 +431,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                 val iw = poly.map { it.x }.maxOrNull()!! - ix
                 val ih = poly.map { it.y }.maxOrNull()!! - iy
                 val x = (ix - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE
-                val y = (iy - tee.iy) * COMPONENT_UNIT_SIZE
+                val y = (iy - tee.iy - 1f) * COMPONENT_UNIT_SIZE
                 val w = iw * COMPONENT_UNIT_SIZE
                 val h = ih * COMPONENT_UNIT_SIZE
                 writer.println("fairway,box,$x,$y,$w,$h,")
