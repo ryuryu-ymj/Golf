@@ -34,9 +34,9 @@ class CourseComponent(
 
     fun setContact(components: List<CourseComponent>) {
         rightContacted = components.findAt(ix + iw, iy) != null
-        leftContacted = components.findAt(ix - iw, iy) != null
+        leftContacted = components.findAt(ix - 1, iy) != null
         topContacted = components.findAt(ix, iy + ih) != null
-        bottomContacted = components.findAt(ix, iy - ih) != null
+        bottomContacted = components.findAt(ix, iy - 1) != null
     }
 
     fun createCourseComponentData() =
@@ -67,6 +67,9 @@ class CourseComponent(
             if (type.Vector2 and (1 shl i) == 0) {
                 edges.add(Edge(v[(i + 3) % 4], v[(i + 1) % 4]))
             }
+        }
+        if (edges.contains(Edge(intVec2(-1, 18), intVec2(-1, 17)), false)) {
+            println("$ix, $iy, $leftContacted")
         }
         return edges
     }
