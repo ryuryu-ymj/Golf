@@ -348,13 +348,117 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         val file = Gdx.files.local("course/${"%02d".format(courseIndex)}body")
         val writer = PrintWriter(file.writer(false))
 
+        val courseComponents = courseComponents.toMutableList()
         courseComponents.forEach {
             it.setContact(courseComponents)
-            if (!it.topContacted || !it.bottomContacted ||
-                !it.rightContacted || !it.leftContacted
-            ) {
-                writer.println(it.getBodyText(tee.ix, tee.iy))
+        }
+
+        // horizontal box
+        while (true) {
+            val left = courseComponents.filter {
+                (!it.topContacted || !it.bottomContacted) &&
+                        it.type.vertex == 0b1111
+            }.minByOrNull {
+                it.ix
+            } ?: break
+            courseComponents.remove(left)
+            var iw = 1
+            while (true) {
+                val next = courseComponents.find {
+                    it.ix == left.ix + iw && it.iy == left.iy &&
+                            (!it.topContacted || !it.bottomContacted) &&
+                            it.type.vertex == 0b1111
+                } ?: break
+                courseComponents.remove(next)
+                iw++
             }
+            val x = (left.ix - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE
+            val y = (left.iy - tee.iy - 1) * COMPONENT_UNIT_SIZE
+            val w = iw * COMPONENT_UNIT_SIZE
+            val h = 1 * COMPONENT_UNIT_SIZE
+            writer.println("fairway,box,$x,$y,$w,$h,")
+        }
+
+        // vertical box
+        while (true) {
+            val bottom = courseComponents.filter {
+                (!it.rightContacted || !it.leftContacted) &&
+                        it.type.vertex == 0b1111
+            }.minByOrNull {
+                it.iy
+            } ?: break
+            courseComponents.remove(bottom)
+            var ih = 1
+            while (true) {
+                val next = courseComponents.find {
+                    it.ix == bottom.ix && it.iy == bottom.iy + ih &&
+                            (!it.rightContacted || !it.leftContacted) &&
+                            it.type.vertex == 0b1111
+                } ?: break
+                courseComponents.remove(next)
+                ih++
+            }
+            val x = (bottom.ix - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE
+            val y = (bottom.iy - tee.iy - 1) * COMPONENT_UNIT_SIZE
+            val w = 1 * COMPONENT_UNIT_SIZE
+            val h = ih * COMPONENT_UNIT_SIZE
+            writer.println("fairway,box,$x,$y,$w,$h,")
+        }
+
+        // up slope polygon
+        while (true) {
+            val left = courseComponents.filter {
+                !it.topContacted && it.type.vertex == 0b0111
+            }.minByOrNull {
+                it.ix
+            } ?: break
+            courseComponents.remove(left)
+            var i = 1
+            while (true) {
+                val next = courseComponents.find {
+                    it.ix == left.ix + i * left.iw && it.iy == left.iy + i &&
+                            it.iw == left.iw &&
+                            !it.topContacted && it.type.vertex == 0b0111
+                } ?: break
+                courseComponents.remove(next)
+                i++
+            }
+            val x = (left.ix - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE
+            val y = (left.iy - tee.iy - 1) * COMPONENT_UNIT_SIZE
+            val w = i * left.iw * COMPONENT_UNIT_SIZE
+            val h = i * COMPONENT_UNIT_SIZE
+            writer.println(
+                "fairway,polygon,$x,$y,$x,${y - COMPONENT_UNIT_SIZE}," +
+                        "${x + w},${y - COMPONENT_UNIT_SIZE + h},${x + w},${y + h},"
+            )
+        }
+
+        // down slope polygon
+        while (true) {
+            val left = courseComponents.filter {
+                !it.topContacted && it.type.vertex == 0b1011
+            }.minByOrNull {
+                it.ix
+            } ?: break
+            courseComponents.remove(left)
+            var i = 1
+            while (true) {
+                val next = courseComponents.find {
+                    it.ix == left.ix + i * left.iw && it.iy == left.iy - i &&
+                            it.iw == left.iw &&
+                            !it.topContacted && it.type.vertex == 0b1011
+                } ?: break
+                courseComponents.remove(next)
+                i++
+            }
+            val x = (left.ix - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE
+            val y = (left.iy - tee.iy - 1) * COMPONENT_UNIT_SIZE
+            val w = i * left.iw * COMPONENT_UNIT_SIZE
+            val h = i * COMPONENT_UNIT_SIZE
+            writer.println(
+                "fairway,polygon,$x,$y,${x + w},${y - h}," +
+                        "${x + w},${y + COMPONENT_UNIT_SIZE - h},$x,${y + COMPONENT_UNIT_SIZE},"
+            )
         }
 
         writer.close()
