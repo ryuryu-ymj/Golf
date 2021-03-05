@@ -41,34 +41,6 @@ class CourseComponent(
 
     fun createCourseComponentData() =
         CourseComponentData(ix, iy, type)
-
-    fun getBodyText(teeIX: Int, teeIY: Int): String {
-        if (type.vertex == 0b1111) {
-            val x = (ix - teeIX - 0.5f) * COMPONENT_UNIT_SIZE
-            val y = (iy - teeIY - 1) * COMPONENT_UNIT_SIZE
-            val w = iw * COMPONENT_UNIT_SIZE
-            val h = ih * COMPONENT_UNIT_SIZE
-            return "fairway,box,$x,$y,$w,$h,"
-        } else {
-            val vertexes = arrayOf(
-                intVec2(ix, iy), intVec2(ix + iw, iy),
-                intVec2(ix + iw, iy + ih), intVec2(ix, iy + ih)
-            )
-            val poly = gdxArrayOf<Vector2>()
-            for (i in 0..3) {
-                if (type.vertex and (1 shl i) != 0) {
-                    poly.add(vertexes[i])
-                }
-            }
-            var str = "fairway,polygon,"
-            poly.forEach {
-                val x = (it.x - teeIX - 0.5f) * COMPONENT_UNIT_SIZE
-                val y = (it.y - teeIY - 1) * COMPONENT_UNIT_SIZE
-                str += "$x,$y,"
-            }
-            return str
-        }
-    }
 }
 
 fun List<CourseComponent>.findAt(ix: Int, iy: Int) = find {
@@ -91,6 +63,7 @@ enum class CourseComponentType(
     val iw: Int = 1, val ih: Int = 1,
 ) {
     TEE("image/ball.png"),
+    HOLE("image/hole.png"),
     FAIRWAY("image/fairway.png"),
     FAIRWAY_SLOPE_UP_11("image/fairway-slope-up-21.png", 0b0111),
     FAIRWAY_SLOPE_DOWN_11("image/fairway-slope-down-21.png", 0b1011),

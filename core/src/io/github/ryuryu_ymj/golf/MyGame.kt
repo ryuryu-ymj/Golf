@@ -15,7 +15,7 @@ class MyGame : KtxGame<KtxScreen>() {
 
     override fun create() {
         asset.load<Texture>("image/ball.png")
-        asset.load<Texture>("image/cell.png")
+        asset.load<Texture>("image/hole.png")
         asset.load<Texture>("image/fairway.png")
         asset.load<Texture>("image/fairway-slope-up-21.png")
         asset.load<Texture>("image/fairway-slope-down-21.png")

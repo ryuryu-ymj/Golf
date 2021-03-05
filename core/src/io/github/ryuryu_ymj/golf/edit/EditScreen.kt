@@ -46,6 +46,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     private val bg = BackGround(stage.width, stage.height)
     private val courseComponents = mutableListOf<CourseComponent>()
     private lateinit var tee: CourseComponent
+    private lateinit var hole: CourseComponent
 
     private var isSelecting = false
     private val selectBegin = vec2()
@@ -84,6 +85,8 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                 stage.addActor(component)
                 if (component.type == CourseComponentType.TEE) {
                     tee = component
+                } else if (component.type == CourseComponentType.HOLE) {
+                    hole = component
                 }
             }
         } catch (e: Exception) {
@@ -97,6 +100,16 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
             tee = CourseComponent(game.asset, CourseComponentType.TEE, 0, 0)
             courseComponents.add(tee)
             stage.addActor(tee)
+        }
+        if (!::hole.isInitialized) {
+            courseComponents.findAt(10, 0)?.let {
+                it.remove()
+                courseComponents.remove(it)
+            }
+            courseComponents
+            hole = CourseComponent(game.asset, CourseComponentType.HOLE, 10, 0)
+            courseComponents.add(hole)
+            stage.addActor(hole)
         }
 
         camera.position.set(tee.centerX, tee.centerY, 0f)
@@ -163,7 +176,7 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         ) {
             // clear course components
             courseComponents.forEach {
-                if (it !== tee) {
+                if (it !== tee && it !== hole) {
                     it.remove()
                 }
             }
@@ -222,6 +235,15 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                         courseComponents.remove(tee)
                         tee.remove()
                         tee = it
+                    }
+                }
+                BrushType.HOLE -> {
+                    addCourseComponent(
+                        CourseComponentType.HOLE, beginIX, beginIY
+                    )?.let {
+                        courseComponents.remove(hole)
+                        hole.remove()
+                        hole = it
                     }
                 }
                 BrushType.DELETE -> {
@@ -352,6 +374,25 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         courseComponents.forEach {
             it.setContact(courseComponents)
         }
+
+        // hole
+        run {
+            val x = (hole.ix - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE
+            val y = (hole.iy - tee.iy - 1) * COMPONENT_UNIT_SIZE
+            writer.println(
+                "fairway,box,$x,$y," +
+                        "${COMPONENT_UNIT_SIZE * 0.2f},${COMPONENT_UNIT_SIZE}"
+            )
+            writer.println(
+                "fairway,box,${x + COMPONENT_UNIT_SIZE * 0.2f},$y," +
+                        "${COMPONENT_UNIT_SIZE * 0.6f},${COMPONENT_UNIT_SIZE * 0.2f}"
+            )
+            writer.println(
+                "fairway,box,${x + COMPONENT_UNIT_SIZE * 0.8f},$y," +
+                        "${COMPONENT_UNIT_SIZE * 0.2f},${COMPONENT_UNIT_SIZE}"
+            )
+        }
+        courseComponents.remove(hole)
 
         // horizontal box
         while (true) {

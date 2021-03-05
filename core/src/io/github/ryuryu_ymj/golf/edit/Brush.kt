@@ -24,6 +24,10 @@ class Brush : Label("MOVE", Scene2DSkin.defaultSkin, defaultStyle) {
                 type = BrushType.TEE
                 setText(type.name)
             }
+            Gdx.input.isKeyJustPressed(Input.Keys.H) -> {
+                type = BrushType.HOLE
+                setText(type.name)
+            }
             Gdx.input.isKeyJustPressed(Input.Keys.F) -> {
                 type = when (type) {
                     BrushType.FAIRWAY -> BrushType.FAIRWAY_SLOPE_UP
@@ -38,5 +42,7 @@ class Brush : Label("MOVE", Scene2DSkin.defaultSkin, defaultStyle) {
 }
 
 enum class BrushType {
-    MOVE, DELETE, TEE, FAIRWAY, FAIRWAY_SLOPE_UP, FAIRWAY_SLOPE_DOWN
+    MOVE, DELETE,
+    TEE, HOLE,
+    FAIRWAY, FAIRWAY_SLOPE_UP, FAIRWAY_SLOPE_DOWN,
 }
