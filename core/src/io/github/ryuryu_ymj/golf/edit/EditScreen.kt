@@ -8,7 +8,6 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
-import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.utils.viewport.FitViewport
@@ -18,18 +17,12 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import ktx.app.KtxScreen
-import ktx.collections.*
 import ktx.graphics.use
-import ktx.math.minus
-import ktx.math.plus
-import ktx.math.times
 import ktx.math.vec2
 import ktx.scene2d.actors
 import ktx.scene2d.table
 import ktx.scene2d.textField
 import java.io.PrintWriter
-import kotlin.collections.filter
-import kotlin.collections.map
 import kotlin.math.max
 import kotlin.math.min
 
@@ -355,196 +348,13 @@ class EditScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         val file = Gdx.files.local("course/${"%02d".format(courseIndex)}body")
         val writer = PrintWriter(file.writer(false))
 
-        val edges = gdxArrayOf<Edge>()
         courseComponents.forEach {
-            edges.addAll(it.createOutline())
-        }
-        val graphList = gdxArrayOf<GdxArray<Vector2>>()
-        val vertexSet = gdxArrayOf<Vector2>()
-
-        while (edges.isNotEmpty()) {
-            val graph = gdxArrayOf<Vector2>()
-            graph.add(edges[0].begin)
-            while (true) {
-                val edge = edges.find { it.begin == graph.last() } ?: break
-                graph.add(edge.end)
-                edges.removeValue(edge, true)
-                if (graph.first() == graph.last()) {
-                    break
-                }
+            it.setContact(courseComponents)
+            if (!it.topContacted || !it.bottomContacted ||
+                !it.rightContacted || !it.leftContacted
+            ) {
+                writer.println(it.getBodyText(tee.ix, tee.iy))
             }
-            graphList.add(graph)
-        }
-        graphList.forEach { vertexSet.addAll(it) }
-
-        //println(graphList)
-        val dirs = listOf(vec2(1f, 0f), vec2(0f, 1f), vec2(-1f, 0f), vec2(0f, -1f))
-        var counter = 0
-        concaveCheck@
-        while (counter < graphList.size) {
-            val graph = graphList[counter]
-            if (counter == 2) println("$graph")
-            for (i in 0 until graph.lastIndex) {
-                val prev = graph[i] -
-                        if (i == 0) graph[graph.lastIndex - 1]
-                        else graph[i - 1]
-                val next = graph[i + 1] - graph[i]
-                if (prev.crs(next) < 0) { // concave
-                    val dir = dirs.find {
-                        prev.crs(it) > 0 || next.crs(it) > 0
-                    }!!
-                    val end = vertexSet.filter {
-                        (it - graph[i]).crs(dir) == 0f &&
-                                (it - graph[i]).dot(dir) > 0
-                    }.minByOrNull {
-                        (it - graph[i]).len2()
-                    }!!
-                    if (graph.contains(end, false)) {
-                        val j = graph.indexOf(end)
-                        val s = min(i, j)
-                        val e = max(i, j)
-                        val cut = gdxArrayOf<Vector2>()
-                        for (k in 0..(end - graph[i]).len().toInt()) {
-                            cut.add(graph[s] + dir * k)
-                        }
-                        vertexSet.addAll(cut)
-                        val new = gdxArrayOf<Vector2>()
-                        new.addAll(graph, s, e - s)
-                        new.addAll(cut)
-                        graphList.add(new)
-                        graph.removeRange(s, e)
-                        cut.reverse()
-                        cut.forEach { graph.insert(s, it) }
-                        continue@concaveCheck
-                    } else {
-                        val graph2 = graphList.find {
-                            it.contains(end, false)
-                        }!!
-                        val j = graph2.indexOf(end)
-                        val cut = gdxArrayOf<Vector2>()
-                        for (k in 0..(end - graph[i]).len().toInt()) {
-                            cut.add(graph[i] + dir * k)
-                        }
-                        vertexSet.addAll(cut)
-                        val new = gdxArrayOf<Vector2>()
-                        var k = i
-                        do {
-                            new.add(graph[k])
-                            k++
-                            if (k >= graph.lastIndex) {
-                                k = 0
-                            }
-                        } while (k != i)
-                        new.addAll(cut)
-                        k = j + 1
-                        if (k >= graph2.lastIndex) {
-                            k = 0
-                        }
-                        while (k != j) {
-                            new.add(graph2[k])
-                            k++
-                            if (k >= graph2.lastIndex) {
-                                k = 0
-                            }
-                        }
-                        cut.reverse()
-                        new.addAll(cut)
-
-                        if (graphList.indexOf(graph2) < counter) {
-                            counter--
-                        }
-                        graphList.removeValue(graph, true)
-                        graphList.removeValue(graph2, true)
-                        graphList.add(new)
-                        continue@concaveCheck
-                    }
-                }
-            }
-            //println(graphList)
-            counter++
-        }
-        //println(graphList)
-
-        /*counter = 0
-        crossCheck@
-        while (counter < graphList.size) {
-            val graph = graphList[counter]
-            for (i in 0 until graph.lastIndex) {
-                for (j in i + 1 until graph.lastIndex) {
-                    if (graph[i] == graph[j]) {
-                        println("$i, $j, $graph")
-                        val new = gdxArrayOf<Vector2>()
-                        new.addAll(graph, i, j - i)
-                        graphList.add(new)
-                        graph.removeRange(i, j - 1)
-                        continue@crossCheck
-                    }
-                }
-            }
-            counter++
-        }*/
-        //println(graphList)
-
-        println("${tee.ix}, ${tee.iy}")
-        counter = 0
-        while (counter < graphList.size) {
-            val graph = graphList[counter]
-            val poly = gdxArrayOf<Vector2>()
-            for (i in 0 until graph.lastIndex) {
-                val prev = graph[i] -
-                        if (i == 0) graph[graph.lastIndex - 1]
-                        else graph[i - 1]
-                val next = graph[i + 1] - graph[i]
-                if (prev.crs(next) != 0f) {
-                    poly.add(graph[i])
-                }
-            }
-            if (poly.isEmpty) {
-                counter++
-                continue
-            }
-            if (poly.size > 8) {
-                val new = gdxArrayOf<Vector2>()
-                new.addAll(poly, 7, poly.size - 7)
-                new.add(poly.first())
-                new.add(poly[7])
-                graphList.add(new)
-                poly.removeRange(8, poly.lastIndex)
-            }
-            graphList[counter] = poly
-            counter++
-        }
-        println(graphList)
-
-        for (poly in graphList) {
-            if (poly.size == 4) {
-                val ix = poly.map { it.x }.minOrNull()!!
-                val iy = poly.map { it.y }.minOrNull()!!
-                val iw = poly.map { it.x }.maxOrNull()!! - ix
-                val ih = poly.map { it.y }.maxOrNull()!! - iy
-                if (poly.contains(vec2(ix, iy), false) &&
-                    poly.contains(vec2(ix + iw, iy), false) &&
-                    poly.contains(vec2(ix, iy + ih), false) &&
-                    poly.contains(vec2(ix + iw, iy + ih), false)
-                ) {
-                    val x = (ix - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE
-                    val y = (iy - tee.iy - 1f) * COMPONENT_UNIT_SIZE
-                    val w = iw * COMPONENT_UNIT_SIZE
-                    val h = ih * COMPONENT_UNIT_SIZE
-                    writer.println("fairway,box,$x,$y,$w,$h,")
-                    println("fairway,box,$poly")
-                    continue
-                }
-            }
-            writer.print("fairway,polygon,")
-            poly.forEach {
-                writer.print((it.x - tee.ix - 0.5f) * COMPONENT_UNIT_SIZE)
-                writer.print(',')
-                writer.print((it.y - tee.iy - 1f) * COMPONENT_UNIT_SIZE)
-                writer.print(',')
-            }
-            writer.println()
-            println("fairway,polygon,$poly")
         }
 
         writer.close()

@@ -3,9 +3,9 @@ package io.github.ryuryu_ymj.golf.edit
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import kotlinx.serialization.Serializable
-import ktx.collections.GdxArray
 import ktx.collections.gdxArrayOf
 
 const val COMPONENT_UNIT_SIZE = 0.2f
@@ -42,36 +42,32 @@ class CourseComponent(
     fun createCourseComponentData() =
         CourseComponentData(ix, iy, type)
 
-    fun createOutline(): GdxArray<Edge> {
-        val edges = gdxArrayOf<Edge>()
-        val v = listOf(
-            intVec2(ix, iy), intVec2(ix + iw, iy),
-            intVec2(ix + iw, iy + ih), intVec2(ix, iy + ih)
-        )
-        val contact = listOf(
-            bottomContacted, rightContacted,
-            topContacted, leftContacted
-        )
-
-        if (type == CourseComponentType.TEE) {
-            edges.add(Edge(v[2], v[3]))
-            return edges
-        }
-        for (i in 0..3) {
-            if (type.Vector2 and (1 shl i) != 0 &&
-                type.Vector2 and (1 shl ((i + 1) % 4)) != 0 &&
-                !contact[i]
-            ) {
-                edges.add(Edge(v[i], v[(i + 1) % 4]))
+    fun getBodyText(teeIX: Int, teeIY: Int): String {
+        if (type.vertex == 0b1111) {
+            val x = (ix - teeIX - 0.5f) * COMPONENT_UNIT_SIZE
+            val y = (iy - teeIY - 1) * COMPONENT_UNIT_SIZE
+            val w = iw * COMPONENT_UNIT_SIZE
+            val h = ih * COMPONENT_UNIT_SIZE
+            return "fairway,box,$x,$y,$w,$h,"
+        } else {
+            val vertexes = arrayOf(
+                intVec2(ix, iy), intVec2(ix + iw, iy),
+                intVec2(ix + iw, iy + ih), intVec2(ix, iy + ih)
+            )
+            val poly = gdxArrayOf<Vector2>()
+            for (i in 0..3) {
+                if (type.vertex and (1 shl i) != 0) {
+                    poly.add(vertexes[i])
+                }
             }
-            if (type.Vector2 and (1 shl i) == 0) {
-                edges.add(Edge(v[(i + 3) % 4], v[(i + 1) % 4]))
+            var str = "fairway,polygon,"
+            poly.forEach {
+                val x = (it.x - teeIX - 0.5f) * COMPONENT_UNIT_SIZE
+                val y = (it.y - teeIY - 1) * COMPONENT_UNIT_SIZE
+                str += "$x,$y,"
             }
+            return str
         }
-        if (edges.contains(Edge(intVec2(-1, 18), intVec2(-1, 17)), false)) {
-            println("$ix, $iy, $leftContacted")
-        }
-        return edges
     }
 }
 
@@ -91,7 +87,7 @@ data class CourseComponentData(
 
 enum class CourseComponentType(
     val texturePath: String,
-    val Vector2: Int = 0b1111,
+    val vertex: Int = 0b1111,
     val iw: Int = 1, val ih: Int = 1,
 ) {
     TEE("image/ball.png"),
