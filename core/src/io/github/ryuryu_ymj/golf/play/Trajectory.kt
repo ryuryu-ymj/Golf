@@ -40,13 +40,13 @@ class Trajectory(asset: AssetManager, gravity: Vector2) : Actor() {
 
     fun setCondition(
         startX: Float, startY: Float,
-        impulseX: Float, impulseY: Float,
+        velocityX: Float, velocityY: Float,
     ) {
         isVisible = true
         ball.setTransform(startX, startY, 0f)
         ball.setLinearVelocity(0f, 0f)
         ball.applyLinearImpulse(
-            impulseX, impulseY,
+            velocityX * ball.mass, velocityY * ball.mass,
             ball.position.x, ball.position.y,
             true
         )

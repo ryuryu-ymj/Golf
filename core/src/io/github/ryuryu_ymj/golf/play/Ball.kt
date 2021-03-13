@@ -19,7 +19,7 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
     private var lastSpeed = 0f
     private var decelerateCount = 0
     private var contactCount = 0
-    private var isFirstContact = true
+    private var hitTimer = 0
 
     init {
         setSize(BALL_SIZE, BALL_SIZE)
@@ -41,7 +41,6 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
                     body == contact.fixtureB.body
                 ) {
                     contactCount++
-                    isFirstContact = false
                 }
             }
 
@@ -66,7 +65,7 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
         body.position.let { setPosition(it.x - originX, it.y - originY) }
         rotation = body.angle * MathUtils.radiansToDegrees
 
-        if (contactCount > 0 && !isFirstContact) {
+        if (contactCount > 0 && hitTimer > 5) {
             val k = 0.1f
             body.applyForceToCenter(
                 -body.linearVelocity.x * k,
@@ -84,10 +83,10 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
             decelerateCount++
                         if (decelerateCount > 60) {
                 body.isAwake = false
-                isFirstContact = true
             }
         }
         lastSpeed = speed
+        if (hitTimer < 60) hitTimer++
     }
 
     override fun draw(batch: Batch, parentAlpha: Float) {
@@ -96,5 +95,13 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
             width, height, scaleX, scaleY, rotation,
             0, 0, texture.width, texture.height, false, false
         )*/
+    }
+
+    fun hitByClub(velocityX: Float, velocityY: Float) {
+        body.applyLinearImpulse(
+            velocityX * body.mass, velocityY * body.mass,
+            x + originX, y + originY, true
+        )
+        hitTimer = 0
     }
 }

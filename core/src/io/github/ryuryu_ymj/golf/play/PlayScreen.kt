@@ -41,6 +41,8 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
 
     private val course = CourseManager()
 
+    private val clubPower = 5f
+
     override fun show() {
         world = createWorld(gravity)
         ball = Ball(game.asset, world, 0f, 0f)
@@ -102,11 +104,10 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                     ball.centerX * 2 - x,
                     ball.centerY * 2 - y
                 )
-                val power = ball.body.mass * 5f
                 trajectory.setCondition(
                     ball.centerX, ball.centerY,
-                    (ball.centerX - x) * power,
-                    (ball.centerY - y) * power
+                    (ball.centerX - x) * clubPower,
+                    (ball.centerY - y) * clubPower
                 )
             }
             return true
@@ -118,11 +119,9 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         if (isDraggingArrow) {
             isDraggingArrow = false
             if (arrow.isVisible) {
-                val power = ball.body.mass * 5f
-                ball.body.applyLinearImpulse(
-                    (ball.centerX - x) * power, (ball.centerY - y) * power,
-                    ball.body.worldCenter.x, ball.body.worldCenter.y,
-                    true
+                ball.hitByClub(
+                    (ball.centerX - x) * clubPower,
+                    (ball.centerY - y) * clubPower
                 )
             }
             arrow.isVisible = false
