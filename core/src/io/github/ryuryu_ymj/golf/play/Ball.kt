@@ -10,8 +10,8 @@ import ktx.box2d.body
 import ktx.box2d.circle
 
 const val BALL_SIZE = 0.05f
-private const val NORMAL_DAMPING = 0f
-//private const val LARGE_DAMPING = 0.4f
+const val BALL_DENSITY = 20f
+const val NORMAL_DAMPING = 0.1f
 
 class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : Actor() {
     val body: Body
@@ -19,6 +19,7 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
     private var lastSpeed = 0f
     private var decelerateCount = 0
     private var contactCount = 0
+    private var isFirstContact = true
 
     init {
         setSize(BALL_SIZE, BALL_SIZE)
@@ -26,36 +27,21 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
         setPosition(centerX - originX, bottomY)
         body = world.body {
             circle(radius = width / 2) {
-                density = 20f
+                density = BALL_DENSITY
                 restitution = 0.7f
                 friction = 0.5f
             }
             type = BodyDef.BodyType.DynamicBody
             linearDamping = NORMAL_DAMPING
-            //angularDamping = 0.2f
-            position.set(x + originX, y + originY)
+                        position.set(x + originX, y + originY)
         }
-        //println("${body.mass * 1000} g")
-        world.setContactListener(object : ContactListener {
+                world.setContactListener(object : ContactListener {
             override fun beginContact(contact: Contact) {
-                if (body == contact.fixtureA.body) {
+                if (body == contact.fixtureA.body ||
+                    body == contact.fixtureB.body
+                ) {
                     contactCount++
-                    if (contactCount == 1) {
-                        contact.fixtureB.body.userData.let {
-                            if (it is GroundType) {
-                                body.linearDamping = it.linearDamping
-                            }
-                        }
-                    }
-                } else if (body == contact.fixtureB.body) {
-                    contactCount++
-                    if (contactCount == 1) {
-                        contact.fixtureA.body.userData.let {
-                            if (it is GroundType) {
-                                body.linearDamping = it.linearDamping
-                            }
-                        }
-                    }
+                    isFirstContact = false
                 }
             }
 
@@ -67,11 +53,9 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
 
             override fun endContact(contact: Contact) {
                 if (body == contact.fixtureA.body ||
-                    body == contact.fixtureB.body) {
+                    body == contact.fixtureB.body
+                ) {
                     contactCount--
-                    if (contactCount == 0) {
-                        body.linearDamping = NORMAL_DAMPING
-                    }
                 }
             }
         })
@@ -82,28 +66,35 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
         body.position.let { setPosition(it.x - originX, it.y - originY) }
         rotation = body.angle * MathUtils.radiansToDegrees
 
+        if (contactCount > 0 && !isFirstContact) {
+            val k = 0.1f
+            body.applyForceToCenter(
+                -body.linearVelocity.x * k,
+                -body.linearVelocity.y * k,
+                false
+            )
+        }
+
         val speed = body.linearVelocity.len()
-        //println(speed)
-        if (speed > lastSpeed) {
+                if (speed > lastSpeed) {
             if (decelerateCount > 0) {
                 decelerateCount = 0
-                //body.linearDamping = NORMAL_DAMPING
-            }
+                            }
         } else if (speed < 0.1f) {
             decelerateCount++
-            //body.linearDamping = LARGE_DAMPING
-            if (decelerateCount > 60) {
+                        if (decelerateCount > 60) {
                 body.isAwake = false
+                isFirstContact = true
             }
         }
         lastSpeed = speed
     }
 
     override fun draw(batch: Batch, parentAlpha: Float) {
-        batch.draw(
+        /*batch.draw(
             texture, x, y, originX, originY,
             width, height, scaleX, scaleY, rotation,
             0, 0, texture.width, texture.height, false, false
-        )
+        )*/
     }
 }

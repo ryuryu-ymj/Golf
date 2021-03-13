@@ -37,7 +37,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
 
     private lateinit var ball: Ball
     private val arrow = DirectingArrow()
-    private val trajectory = Trajectory(game.asset)
+    private val trajectory = Trajectory(game.asset, gravity)
 
     private val course = CourseManager()
 
@@ -95,6 +95,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         if (isDraggingArrow) {
             if (hypot(x - ball.centerX, y - ball.centerY) < ball.width * 5) {
                 arrow.isVisible = false
+                trajectory.isVisible = false
             } else {
                 arrow.setBeginAndEnd(
                     ball.centerX, ball.centerY,
@@ -104,9 +105,8 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                 val power = ball.body.mass * 5f
                 trajectory.setCondition(
                     ball.centerX, ball.centerY,
-                    (ball.centerX - x) * power / ball.body.mass,
-                    (ball.centerY - y) * power / ball.body.mass,
-                    gravity.y
+                    (ball.centerX - x) * power,
+                    (ball.centerY - y) * power
                 )
             }
             return true
@@ -126,6 +126,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                 )
             }
             arrow.isVisible = false
+            trajectory.isVisible = false
             return true
         }
         return false
