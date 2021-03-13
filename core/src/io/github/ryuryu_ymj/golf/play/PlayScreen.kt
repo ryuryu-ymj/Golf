@@ -28,17 +28,16 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     )
     private val stage = Stage(viewport, batch)
 
-    private val gravity = vec2(0f, -10f)
+    private val gravity = vec2(0f, -3f)
     private lateinit var world: World
     private val debugRenderer = Box2DDebugRenderer()
 
     private val input = MyInputProcessor(viewport, this)
     private var isDraggingArrow = false
 
-    //private val bg = BackGround(stage.width, stage.height)
     private lateinit var ball: Ball
     private val arrow = DirectingArrow()
-    //private val fairways = GdxArray<Ground>()
+    private val trajectory = Trajectory(game.asset)
 
     private val course = CourseManager()
 
@@ -51,6 +50,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         course.readCourse(courseIndex, stage, world)
         stage += ball
         stage += arrow
+        stage += trajectory
 
         Gdx.input.inputProcessor = input
     }
@@ -100,6 +100,13 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                     ball.centerX, ball.centerY,
                     ball.centerX * 2 - x,
                     ball.centerY * 2 - y
+                )
+                val power = ball.body.mass * 5f
+                trajectory.setCondition(
+                    ball.centerX, ball.centerY,
+                    (ball.centerX - x) * power / ball.body.mass,
+                    (ball.centerY - y) * power / ball.body.mass,
+                    gravity.y
                 )
             }
             return true

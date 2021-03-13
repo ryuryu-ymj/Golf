@@ -10,7 +10,7 @@ import ktx.box2d.body
 import ktx.box2d.circle
 
 const val BALL_SIZE = 0.05f
-private const val NORMAL_DAMPING = 0.1f
+private const val NORMAL_DAMPING = 0f
 //private const val LARGE_DAMPING = 0.4f
 
 class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : Actor() {
