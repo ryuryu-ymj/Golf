@@ -95,7 +95,9 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
 
     override fun touchDragged(x: Float, y: Float): Boolean {
         if (isDraggingArrow) {
-            if (hypot(x - ball.centerX, y - ball.centerY) < ball.width * 5) {
+            val ax = ball.centerX - x
+            val ay = ball.centerY - y
+            if (hypot(ax, ay) < ball.width * 5) {
                 arrow.isVisible = false
                 trajectory.isVisible = false
             } else {
@@ -106,9 +108,8 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                 )
                 trajectory.setBallCondition(
                     ball.centerX, ball.centerY,
-                    (ball.centerX - x) * clubPower,
-                    (ball.centerY - y) * clubPower,
-                    0.95f, 1.05f
+                    ax * clubPower, ay * clubPower,
+                    0.93f, 1.07f
                 )
             }
             return true

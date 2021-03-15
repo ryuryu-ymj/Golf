@@ -10,7 +10,6 @@ import ktx.box2d.body
 import ktx.box2d.circle
 import ktx.box2d.createWorld
 import ktx.graphics.use
-import kotlin.math.hypot
 
 class Trajectory(gravity: Vector2) {
     private val shape = ShapeRenderer()
@@ -58,14 +57,9 @@ class Trajectory(gravity: Vector2) {
     ) {
         isVisible = true
 
-        val v = hypot(velocityX, velocityY)
         val vxSign = if (velocityX > 0) 1 else -1
 
-        ball.setTransform(
-            startX + BALL_SIZE / 2 * velocityY * minRatio / v * vxSign,
-            startY - BALL_SIZE / 2 * velocityX * minRatio / v * vxSign,
-            0f
-        )
+        ball.setTransform(startX, startY, 0f)
         ball.setLinearVelocity(0f, 0f)
         ball.applyLinearImpulse(
             velocityX * minRatio * ball.mass,
@@ -74,16 +68,14 @@ class Trajectory(gravity: Vector2) {
             true
         )
         for (i in 0..x1arr.lastIndex) {
-            x1arr[i] = ball.position.x
-            y1arr[i] = ball.position.y
+            val v = ball.linearVelocity
+            val lenV = v.len()
+            x1arr[i] = ball.position.x + BALL_SIZE / 2 * v.y / lenV * vxSign
+            y1arr[i] = ball.position.y - BALL_SIZE / 2 * v.x / lenV * vxSign
             for (j in 1..4) world.step(1f / 60, 6, 2)
         }
 
-        ball.setTransform(
-            startX - BALL_SIZE / 2 * velocityY * maxRatio / v * vxSign,
-            startY + BALL_SIZE / 2 * velocityX * maxRatio / v * vxSign,
-            0f
-        )
+        ball.setTransform(startX, startY, 0f)
         ball.setLinearVelocity(0f, 0f)
         ball.applyLinearImpulse(
             velocityX * maxRatio * ball.mass,
@@ -92,8 +84,10 @@ class Trajectory(gravity: Vector2) {
             true
         )
         for (i in 0..x1arr.lastIndex) {
-            x2arr[i] = ball.position.x
-            y2arr[i] = ball.position.y
+            val v = ball.linearVelocity
+            val lenV = v.len()
+            x2arr[i] = ball.position.x - BALL_SIZE / 2 * v.y / lenV * vxSign
+            y2arr[i] = ball.position.y + BALL_SIZE / 2 * v.x / lenV * vxSign
             for (j in 1..4) world.step(1f / 60, 6, 2)
         }
     }
