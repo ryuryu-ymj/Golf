@@ -37,7 +37,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
 
     private lateinit var ball: Ball
     private val arrow = DirectingArrow()
-    private val trajectory = Trajectory(game.asset, gravity)
+    private val trajectory = Trajectory(gravity)
 
     private val course = CourseManager()
 
@@ -52,7 +52,6 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         course.readCourse(courseIndex, stage, world)
         stage += ball
         stage += arrow
-        stage += trajectory
 
         Gdx.input.inputProcessor = input
     }
@@ -70,6 +69,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
     override fun render(delta: Float) {
         //camera.update()
         stage.draw()
+        trajectory.draw(camera)
         debugRenderer.render(world, camera.combined)
 
         world.step(1f / 60, 6, 2)
@@ -104,10 +104,11 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                     ball.centerX * 2 - x,
                     ball.centerY * 2 - y
                 )
-                trajectory.setCondition(
+                trajectory.setBallCondition(
                     ball.centerX, ball.centerY,
                     (ball.centerX - x) * clubPower,
-                    (ball.centerY - y) * clubPower
+                    (ball.centerY - y) * clubPower,
+                    0.95f, 1.05f
                 )
             }
             return true
@@ -125,7 +126,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
                 )
             }
             arrow.isVisible = false
-            trajectory.isVisible = false
+            //trajectory.isVisible = false
             return true
         }
         return false
@@ -135,6 +136,7 @@ class PlayScreen(private val game: MyGame) : KtxScreen, MyTouchable {
         course.dispose()
         //bg.dispose()
         arrow.dispose()
+        trajectory.dispose()
         debugRenderer.dispose()
         stage.dispose()
         batch.dispose()

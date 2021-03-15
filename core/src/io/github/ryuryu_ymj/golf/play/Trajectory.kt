@@ -1,18 +1,19 @@
 package io.github.ryuryu_ymj.golf.play
 
-import com.badlogic.gdx.assets.AssetManager
-import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Camera
+import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.physics.box2d.BodyDef
-import com.badlogic.gdx.scenes.scene2d.Actor
 import ktx.box2d.body
 import ktx.box2d.circle
 import ktx.box2d.createWorld
-import ktx.math.vec2
+import ktx.graphics.use
+import kotlin.math.hypot
 
-class Trajectory(asset: AssetManager, gravity: Vector2) : Actor() {
-    private val texture = asset.get<Texture>("image/ball.png")
+class Trajectory(gravity: Vector2) {
+    private val shape = ShapeRenderer()
     private val world = createWorld(gravity)
     private val ball = world.body {
         circle(radius = BALL_SIZE / 2) {
@@ -21,38 +22,83 @@ class Trajectory(asset: AssetManager, gravity: Vector2) : Actor() {
         type = BodyDef.BodyType.DynamicBody
         linearDamping = NORMAL_DAMPING
     }
-    private val dots = Array(20) { vec2() }
-    private val dotSize = BALL_SIZE / 2
+    private val x1arr = FloatArray(100)
+    private val y1arr = FloatArray(100)
+    private val x2arr = FloatArray(100)
+    private val y2arr = FloatArray(100)
+    var isVisible = false
 
-    init {
-        isVisible = false
-    }
-
-    override fun draw(batch: Batch, parentAlpha: Float) {
-        dots.forEach {
-            batch.draw(
-                texture,
-                it.x - dotSize / 2, it.y - dotSize / 2,
-                dotSize, dotSize
-            )
+    fun draw(camera: Camera) {
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
+        shape.use(ShapeRenderer.ShapeType.Filled, camera) {
+            it.setColor(1f, 1f, 1f, 0.4f)
+            for (i in 0 until x1arr.lastIndex) {
+                it.triangle(
+                    x1arr[i], y1arr[i],
+                    x1arr[i + 1], y1arr[i + 1],
+                    x2arr[i], y2arr[i]
+                )
+            }
+            for (i in 0 until x2arr.lastIndex) {
+                it.triangle(
+                    x2arr[i], y2arr[i],
+                    x2arr[i + 1], y2arr[i + 1],
+                    x1arr[i + 1], y1arr[i + 1]
+                )
+            }
         }
+        Gdx.gl.glDisable(GL20.GL_BLEND)
     }
 
-    fun setCondition(
+    fun setBallCondition(
         startX: Float, startY: Float,
         velocityX: Float, velocityY: Float,
+        minRatio: Float, maxRatio: Float
     ) {
         isVisible = true
-        ball.setTransform(startX, startY, 0f)
+
+        val v = hypot(velocityX, velocityY)
+        val vxSign = if (velocityX > 0) 1 else -1
+
+        ball.setTransform(
+            startX + BALL_SIZE / 2 * velocityY * minRatio / v * vxSign,
+            startY - BALL_SIZE / 2 * velocityX * minRatio / v * vxSign,
+            0f
+        )
         ball.setLinearVelocity(0f, 0f)
         ball.applyLinearImpulse(
-            velocityX * ball.mass, velocityY * ball.mass,
+            velocityX * minRatio * ball.mass,
+            velocityY * minRatio * ball.mass,
             ball.position.x, ball.position.y,
             true
         )
-        dots.forEach {
-            for (i in 1..10) world.step(1f / 60, 6, 2)
-            it.set(ball.position)
+        for (i in 0..x1arr.lastIndex) {
+            x1arr[i] = ball.position.x
+            y1arr[i] = ball.position.y
+            for (j in 1..4) world.step(1f / 60, 6, 2)
         }
+
+        ball.setTransform(
+            startX - BALL_SIZE / 2 * velocityY * maxRatio / v * vxSign,
+            startY + BALL_SIZE / 2 * velocityX * maxRatio / v * vxSign,
+            0f
+        )
+        ball.setLinearVelocity(0f, 0f)
+        ball.applyLinearImpulse(
+            velocityX * maxRatio * ball.mass,
+            velocityY * maxRatio * ball.mass,
+            ball.position.x, ball.position.y,
+            true
+        )
+        for (i in 0..x1arr.lastIndex) {
+            x2arr[i] = ball.position.x
+            y2arr[i] = ball.position.y
+            for (j in 1..4) world.step(1f / 60, 6, 2)
+        }
+    }
+
+    fun dispose() {
+        shape.dispose()
     }
 }

@@ -90,11 +90,11 @@ class Ball(asset: AssetManager, world: World, centerX: Float, bottomY: Float) : 
     }
 
     override fun draw(batch: Batch, parentAlpha: Float) {
-        /*batch.draw(
+        batch.draw(
             texture, x, y, originX, originY,
             width, height, scaleX, scaleY, rotation,
             0, 0, texture.width, texture.height, false, false
-        )*/
+        )
     }
 
     fun hitByClub(velocityX: Float, velocityY: Float) {
